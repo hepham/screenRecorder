@@ -236,3 +236,15 @@ async def verify_test_run(run_id: str, update: TestRunVerificationUpdate):
     run.reason = update.reason
     
     return run
+
+from server.models.device import DeviceInfo, DeviceRole
+from server.ws.device_manager import manager
+
+@router.get("/agents", response_model=List[DeviceInfo])
+async def list_agents():
+    # Return all devices that are PC Agents
+    agents = []
+    for device in manager.devices.values():
+        if device.role == DeviceRole.PC_AGENT:
+            agents.append(device)
+    return agents

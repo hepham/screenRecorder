@@ -26,3 +26,8 @@ Active development tracks for Remote Screen Recorder.
 
 ## [~] Track: Test Verification UI
 *Link: [./conductor/tracks/test_verification_20260422/](./conductor/tracks/test_verification_20260422/)*
+
+---
+
+## [~] Track: PC Agent Management & Auto-Assignment
+*Link: [./conductor/tracks/pc_agent_assignment_20260422/](./conductor/tracks/pc_agent_assignment_20260422/)*
