@@ -89,6 +89,14 @@ def complete_test_run(run_id: str, video_filename: str):
         return test_runs[run_id]
     return None
 
+def fail_test_run(run_id: str, reason: str = None):
+    if run_id in test_runs:
+        test_runs[run_id].status = "failed"
+        if reason:
+            test_runs[run_id].reason = reason
+        return test_runs[run_id]
+    return None
+
 from server.models.test_suite import get_suite
 
 async def create_suite_run(suite_id: str, agent_id: str, executed_by: str = None) -> list[TestRunStatus]:

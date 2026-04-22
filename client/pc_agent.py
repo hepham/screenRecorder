@@ -60,6 +60,30 @@ async def run_suite(suite_id: str, tests: list, ws):
     if ws:
         await ws.send(json.dumps({"status": "idle"}))
 
+def check_adb_device() -> bool:
+    """Check if an ADB device is connected and available."""
+    try:
+        result = subprocess.run(
+            ["adb", "devices"], capture_output=True, text=True, timeout=5
+        )
+        lines = result.stdout.strip().split("\n")
+        # First line is "List of devices attached", actual devices follow
+        devices = [l for l in lines[1:] if l.strip() and "device" in l]
+        return len(devices) > 0
+    except Exception as e:
+        logger.error(f"Failed to check ADB devices: {e}")
+        return False
+
+async def report_test_failure(test_run_id: str, reason: str, ws):
+    """Report a test failure back to the server."""
+    logger.error(f"Test {test_run_id} failed: {reason}")
+    if ws:
+        await ws.send(json.dumps({
+            "status": "test_failed",
+            "test_run_id": test_run_id,
+            "reason": reason
+        }))
+
 async def run_test_logic(test_run_id: str, audio_url: str, ws, suite_id: str = None, progress: str = None):
     if ws:
         msg = {"status": "running_test"}
@@ -69,22 +93,45 @@ async def run_test_logic(test_run_id: str, audio_url: str, ws, suite_id: str = N
             msg["progress"] = progress
         await ws.send(json.dumps(msg))
     
+    # Pre-check: is an ADB device connected?
+    if not check_adb_device():
+        await report_test_failure(
+            test_run_id,
+            "No ADB device found. Connect an Android device via USB or wireless ADB.",
+            ws
+        )
+        return
+    
     local_file = f"{test_run_id}.mp4"
     logger.info(f"Starting scrcpy to record to {local_file}")
     
     if os.name == 'nt':
         record_proc = subprocess.Popen(
             ["scrcpy", "--no-playback", "--record", local_file],
-            creationflags=subprocess.CREATE_NEW_PROCESS_GROUP
+            creationflags=subprocess.CREATE_NEW_PROCESS_GROUP,
+            stderr=subprocess.PIPE
         )
     else:
-        record_proc = subprocess.Popen(["scrcpy", "--no-playback", "--record", local_file])
+        record_proc = subprocess.Popen(
+            ["scrcpy", "--no-playback", "--record", local_file],
+            stderr=subprocess.PIPE
+        )
     
+    # Give scrcpy a moment to start, then check if it's still running
     await asyncio.sleep(2)
+    if record_proc.poll() is not None:
+        stderr_output = record_proc.stderr.read().decode(errors="replace") if record_proc.stderr else ""
+        await report_test_failure(
+            test_run_id,
+            f"scrcpy failed to start: {stderr_output.strip()}",
+            ws
+        )
+        return
+    
     asyncio.create_task(play_audio(audio_url))
     
     logger.info("Waiting 15 seconds for test to complete (shortened for demo)...")
-    await asyncio.sleep(15) # Wait 15 seconds instead of 60s to speed up tests during dev
+    await asyncio.sleep(15)
     
     logger.info("Stopping scrcpy")
     if os.name == 'nt':
@@ -105,7 +152,7 @@ async def run_test_logic(test_run_id: str, audio_url: str, ws, suite_id: str = N
         with open(local_file, "rb") as f:
             files = {"file": (local_file, f, "video/mp4")}
             data = {"device_id": AGENT_ID, "test_run_id": test_run_id}
-            res = requests.post(f"{API_URL}/upload", files=files, data=data)
+            res = requests.post(f"{API_URL}/upload", files=files, data=data, timeout=30)
             if res.status_code == 200:
                 logger.info("Upload complete!")
                 if ws:
@@ -115,7 +162,11 @@ async def run_test_logic(test_run_id: str, audio_url: str, ws, suite_id: str = N
                 
         os.remove(local_file)
     else:
-        logger.error("Recorded file not found locally after scrcpy finished!")
+        await report_test_failure(
+            test_run_id,
+            "Recording file not found after scrcpy finished.",
+            ws
+        )
 
 async def run_test(test_run_id: str, audio_url: str, ws):
     global agent_status

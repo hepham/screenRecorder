@@ -13,8 +13,25 @@ async def websocket_agent_endpoint(websocket: WebSocket, agent_id: str):
         while True:
             data = await websocket.receive_json()
             if "status" in data:
+                status_str = data["status"]
+                
+                # Handle test failure reports from agent
+                if status_str == "test_failed":
+                    test_run_id = data.get("test_run_id")
+                    reason = data.get("reason", "Unknown error")
+                    if test_run_id:
+                        from server.engine.runner import fail_test_run
+                        fail_test_run(test_run_id, reason)
+                        await manager.broadcast_to_web({
+                            "type": "test_failed",
+                            "test_run_id": test_run_id,
+                            "reason": reason
+                        })
+                    logger.warning(f"Agent {agent_id} reported test failure: {reason}")
+                    continue
+                
                 try:
-                    status = DeviceStatus(data["status"])
+                    status = DeviceStatus(status_str)
                     suite_name = None
                     progress = data.get("progress")
                     suite_id = data.get("suite_id")
