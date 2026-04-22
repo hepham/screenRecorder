@@ -84,26 +84,32 @@ async def report_test_failure(test_run_id: str, reason: str, ws):
             "reason": reason
         }))
 
-async def wait_for_scrcpy_ready(proc: subprocess.Popen, timeout: float = 10.0) -> bool:
-    """Reads stdout of the process to find 'Recording started' with a timeout."""
-    def read_stdout():
+async def wait_for_scrcpy_ready(local_file: str, proc: subprocess.Popen, timeout: float = 10.0) -> bool:
+    """Waits until the mp4 file exists and has data written to it."""
+    start_time = time.time()
+    
+    # Consume stdout in background to prevent buffer from filling up
+    async def drain_stream():
         while True:
-            line = proc.stdout.readline()
+            line = await asyncio.to_thread(proc.stdout.readline)
             if not line:
                 break
-            decoded_line = line.decode(errors="replace").strip()
-            if decoded_line:
-                logger.info(f"[scrcpy output] {decoded_line}")
-            if "Recording started" in decoded_line:
-                return True
-        return False
+                
+    if proc.stdout:
+        asyncio.create_task(drain_stream())
         
-    try:
-        # Run the blocking read in a separate thread
-        ready = await asyncio.wait_for(asyncio.to_thread(read_stdout), timeout=timeout)
-        return ready
-    except asyncio.TimeoutError:
-        return False
+    while time.time() - start_time < timeout:
+        if proc.poll() is not None:
+            return False
+            
+        if os.path.exists(local_file) and os.path.getsize(local_file) > 0:
+            # Wait a tiny bit more to ensure it's actively recording
+            await asyncio.sleep(0.5)
+            return True
+            
+        await asyncio.sleep(0.5)
+        
+    return False
 
 async def start_scrcpy_with_retry(local_file: str, max_retries: int = 2):
     """Starts scrcpy with retries if it fails to report 'Recording started'."""
@@ -123,7 +129,7 @@ async def start_scrcpy_with_retry(local_file: str, max_retries: int = 2):
                 stderr=subprocess.STDOUT
             )
             
-        ready = await wait_for_scrcpy_ready(record_proc)
+        ready = await wait_for_scrcpy_ready(local_file, record_proc)
         
         if ready:
             logger.info("scrcpy is ready and recording.")
