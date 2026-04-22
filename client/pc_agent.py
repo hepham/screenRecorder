@@ -85,22 +85,22 @@ async def report_test_failure(test_run_id: str, reason: str, ws):
         }))
 
 async def wait_for_scrcpy_ready(proc: subprocess.Popen, timeout: float = 10.0) -> bool:
-    """Reads stderr of the process to find 'Recording started' with a timeout."""
-    def read_stderr():
+    """Reads stdout of the process to find 'Recording started' with a timeout."""
+    def read_stdout():
         while True:
-            line = proc.stderr.readline()
+            line = proc.stdout.readline()
             if not line:
                 break
             decoded_line = line.decode(errors="replace").strip()
             if decoded_line:
-                logger.info(f"[scrcpy stderr] {decoded_line}")
+                logger.info(f"[scrcpy output] {decoded_line}")
             if "Recording started" in decoded_line:
                 return True
         return False
         
     try:
         # Run the blocking read in a separate thread
-        ready = await asyncio.wait_for(asyncio.to_thread(read_stderr), timeout=timeout)
+        ready = await asyncio.wait_for(asyncio.to_thread(read_stdout), timeout=timeout)
         return ready
     except asyncio.TimeoutError:
         return False
@@ -113,12 +113,14 @@ async def start_scrcpy_with_retry(local_file: str, max_retries: int = 2):
             record_proc = subprocess.Popen(
                 ["scrcpy", "--no-playback", "--record", local_file],
                 creationflags=subprocess.CREATE_NEW_PROCESS_GROUP,
-                stderr=subprocess.PIPE
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT
             )
         else:
             record_proc = subprocess.Popen(
                 ["scrcpy", "--no-playback", "--record", local_file],
-                stderr=subprocess.PIPE
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT
             )
             
         ready = await wait_for_scrcpy_ready(record_proc)
