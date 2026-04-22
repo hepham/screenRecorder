@@ -1,0 +1,12 @@
+{
+  "track_id": "ui_run_controls_20260423",
+  "type": "feature",
+  "status": "new",
+  "priority": "critical",
+  "depends_on": [],
+  "estimated_hours": null,
+  "created_at": "2026-04-22T19:10:00Z",
+  "updated_at": "2026-04-22T19:10:00Z",
+  "description": "Bổ sung tính năng Target PC Agent và nút Run tại từng Test Suite/Case, điều chỉnh lại bố cục UI.",
+  "beads_epic": "recordScreen-3dm"
+}

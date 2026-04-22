@@ -31,3 +31,18 @@ Active development tracks for Remote Screen Recorder.
 
 ## [~] Track: PC Agent Management & Auto-Assignment
 *Link: [./conductor/tracks/pc_agent_assignment_20260422/](./conductor/tracks/pc_agent_assignment_20260422/)*
+
+---
+
+## [x] Track: Dashboard UI Enhancements
+*Link: [./conductor/tracks/dashboard_ui_20260422/](./conductor/tracks/dashboard_ui_20260422/)*
+
+---
+
+## [x] Track: Layout & Run Execution Controls
+*Link: [./conductor/tracks/ui_run_controls_20260423/](./conductor/tracks/ui_run_controls_20260423/)*
+
+---
+
+## [x] Track: Fix asyncio.create_task crash in BackgroundTasks
+*Link: [./conductor/tracks/fix_async_background_20260423/](./conductor/tracks/fix_async_background_20260423/)*

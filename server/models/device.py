@@ -17,3 +17,5 @@ class DeviceInfo(BaseModel):
     device_id: str
     role: DeviceRole
     status: DeviceStatus
+    current_suite_name: Optional[str] = None
+    current_test_progress: Optional[str] = None

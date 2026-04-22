@@ -43,9 +43,16 @@ class ConnectionManager:
             websocket = self.active_connections[device_id]
             await websocket.send_json(command)
 
-    async def update_device_status(self, device_id: str, status: DeviceStatus):
+    async def update_device_status(self, device_id: str, status: DeviceStatus, suite_name: Optional[str] = None, progress: Optional[str] = None):
         if device_id in self.devices:
             self.devices[device_id].status = status
+            if suite_name is not None:
+                self.devices[device_id].current_suite_name = suite_name
+            if progress is not None:
+                self.devices[device_id].current_test_progress = progress
+            if status in [DeviceStatus.IDLE, DeviceStatus.OFFLINE]:
+                self.devices[device_id].current_suite_name = None
+                self.devices[device_id].current_test_progress = None
             await self.broadcast_device_update()
 
     async def connect_dashboard(self, websocket: WebSocket):

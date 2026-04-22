@@ -18,9 +18,11 @@ from fastapi.staticfiles import StaticFiles
 
 # Ensure recordings dir exists
 os.makedirs("recordings", exist_ok=True)
+os.makedirs("audios", exist_ok=True)
 
 # Mount static files for recordings playback
 app.mount("/recordings", StaticFiles(directory="recordings"), name="recordings")
+app.mount("/audios", StaticFiles(directory="audios"), name="audios")
 
 app.include_router(ws.router, prefix="/ws", tags=["websocket"])
 app.include_router(api.router, prefix="/api", tags=["api"])

@@ -15,7 +15,17 @@ async def websocket_agent_endpoint(websocket: WebSocket, agent_id: str):
             if "status" in data:
                 try:
                     status = DeviceStatus(data["status"])
-                    await manager.update_device_status(agent_id, status)
+                    suite_name = None
+                    progress = data.get("progress")
+                    suite_id = data.get("suite_id")
+                    
+                    if suite_id:
+                        from server.models.test_suite import get_suite
+                        suite = get_suite(suite_id)
+                        if suite:
+                            suite_name = suite.name
+                            
+                    await manager.update_device_status(agent_id, status, suite_name, progress)
                 except ValueError:
                     logger.warning(f"Invalid status received from {agent_id}: {data['status']}")
     except WebSocketDisconnect:

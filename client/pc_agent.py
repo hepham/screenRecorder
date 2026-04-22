@@ -12,9 +12,10 @@ import signal
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-SERVER_URL = "ws://127.0.0.1:8000/ws/agent"
-API_URL = "http://127.0.0.1:8000/api"
-AGENT_ID = f"pc-agent-{uuid.uuid4().hex[:6]}"
+SERVER_URL = "ws://192.168.1.5:8000/ws/agent"
+API_URL = "http://192.168.1.5:8000/api"
+import socket
+AGENT_ID = f"pc-agent-{socket.gethostname()}"
 
 async def play_audio(audio_url: str):
     logger.info(f"Downloading audio from {audio_url}")
@@ -47,20 +48,26 @@ async def run_suite(suite_id: str, tests: list, ws):
     agent_status = "running_test"
     logger.info(f"Starting suite {suite_id} with {len(tests)} tests")
     
-    for test in tests:
+    total = len(tests)
+    for i, test in enumerate(tests):
         test_run_id = test.get("test_run_id")
         audio_url = test.get("audio_url")
         logger.info(f"Running suite test {test_run_id}")
-        await run_test_logic(test_run_id, audio_url, ws)
+        await run_test_logic(test_run_id, audio_url, ws, suite_id=suite_id, progress=f"{i+1}/{total}")
         
     logger.info(f"Suite {suite_id} completed")
     agent_status = "idle"
     if ws:
         await ws.send(json.dumps({"status": "idle"}))
 
-async def run_test_logic(test_run_id: str, audio_url: str, ws):
+async def run_test_logic(test_run_id: str, audio_url: str, ws, suite_id: str = None, progress: str = None):
     if ws:
-        await ws.send(json.dumps({"status": "running_test"}))
+        msg = {"status": "running_test"}
+        if suite_id:
+            msg["suite_id"] = suite_id
+        if progress:
+            msg["progress"] = progress
+        await ws.send(json.dumps(msg))
     
     local_file = f"{test_run_id}.mp4"
     logger.info(f"Starting scrcpy to record to {local_file}")

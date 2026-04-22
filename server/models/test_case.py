@@ -4,6 +4,7 @@ import uuid
 
 class TestCaseCreate(BaseModel):
     name: str
+    utterance: str
     audio_url: str
     description: Optional[str] = None
 

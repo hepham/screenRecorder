@@ -13,119 +13,105 @@
     </header>
 
     <main>
-        <div class="column">
-            <!-- Device Management Panel -->
-            <section class="panel" id="device-panel">
-                <h2>Connected PC Agents</h2>
-                <div class="device-list" id="device-list">
-                    <!-- Devices will be populated here -->
-                </div>
-            </section>
+        <!-- Execution Configuration Panel -->
+        <section class="panel" style="display: flex; align-items: center; gap: 15px; margin-bottom: 2rem; padding: 1rem 1.5rem;">
+            <label for="executor-name" style="font-weight: bold; margin: 0;">Executed By: </label>
+            <input type="text" id="executor-name" placeholder="Your Name" value="Auto" required style="width: 300px; margin: 0;">
+            <!-- Hidden global runner status for backwards compatibility in JS -->
+            <div class="runner-status" id="runner-status" style="display: none;"></div>
+            <!-- Global agent select is hidden but kept for JS compat during Phase 1 -->
+            <select id="agent-select" style="display: none;">
+                <option value="auto">Auto-assign (Idle Agent)</option>
+            </select>
+        </section>
 
-            <!-- Test Cases Panel -->
-            <section class="panel" id="tests-panel">
-                <h2>Test Cases</h2>
-                
-                <form id="add-test-form">
-                    <input type="text" id="test-name" placeholder="Test Name" required>
-                    <input type="url" id="test-audio-url" placeholder="Audio URL" required>
-                    <input type="text" id="test-desc" placeholder="Description (optional)">
-                    <button type="submit">Add Test</button>
-                </form>
-
-                <div class="test-list" id="test-list">
-                    <!-- Tests will be populated here -->
-                </div>
-            </section>
-
-            <!-- Test Suites Panel -->
-            <section class="panel" id="suites-panel">
-                <div style="display: flex; justify-content: space-between; align-items: center;">
-                    <h2>Test Suites</h2>
-                    <button type="button" id="toggle-import-btn" style="font-size: 0.8rem;">Import Excel</button>
-                </div>
-                
-                <!-- Add Excel Import Form -->
-                <form id="import-suite-form" style="display: none; margin-bottom: 15px; border: 1px dashed var(--border-color); padding: 10px; border-radius: 4px;">
-                    <label style="font-size: 0.85rem;">Import from Excel/CSV (Columns: tên bộ test, utterance, audio)</label>
-                    <input type="file" id="excel-file" accept=".xlsx,.csv" required style="margin-bottom: 5px;">
-                    <button type="submit">Preview Import</button>
-                </form>
-                
-                <!-- Preview Table Container -->
-                <div id="import-preview-container" style="display: none; margin-bottom: 15px; border: 1px solid var(--accent-color); padding: 10px; border-radius: 4px;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                        <h3 style="margin: 0; font-size: 1rem;">Import Preview</h3>
-                        <button type="button" id="cancel-import-btn" style="background-color: var(--border-color); padding: 0.2rem 0.5rem;">Cancel</button>
+        <div class="top-row">
+            <div class="column left-col">
+                <!-- Device Management Panel -->
+                <section class="panel" id="device-panel">
+                    <h2>Connected PC Agents</h2>
+                    <div class="device-list" id="device-list">
+                        <!-- Devices will be populated here -->
                     </div>
-                    <div id="import-errors" style="color: var(--error); margin-bottom: 10px; font-size: 0.85rem; white-space: pre-wrap;"></div>
-                    <div style="max-height: 200px; overflow-y: auto; background: var(--bg-color); border-radius: 4px; margin-bottom: 10px;">
-                        <table style="width: 100%; border-collapse: collapse; font-size: 0.85rem;" id="preview-table">
-                            <thead style="position: sticky; top: 0; background: var(--panel-bg);">
-                                <tr style="border-bottom: 1px solid #444; text-align: left;">
-                                    <th style="padding: 5px;">Suite Name</th>
-                                    <th style="padding: 5px;">Cases</th>
-                                    <th style="padding: 5px;">Status</th>
-                                </tr>
-                            </thead>
-                            <tbody id="preview-table-body">
-                            </tbody>
-                        </table>
+                </section>
+            </div>
+
+            <div class="column right-col">
+                <!-- Test Cases Panel (Modified to Test Creation) -->
+                <section class="panel" id="test-creation-panel">
+                    <h2>Test Creation</h2>
+                    <button id="open-test-modal-btn">Tạo testcase</button>
+                    
+                    <hr style="border-color: var(--border-color); margin: 15px 0;">
+
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <h3>Create Test Suite</h3>
                     </div>
-                    <button type="button" id="confirm-import-btn" disabled style="width: 100%;">Confirm & Save</button>
-                </div>
-                
-                <form id="add-suite-form">
-                    <input type="text" id="suite-name" placeholder="Suite Name" required>
-                    <input type="text" id="suite-desc" placeholder="Description (optional)">
-                    <div style="margin-top: 10px; font-size: 0.9rem;">
-                        <label>Select Test Cases:</label>
-                        <div id="suite-test-selection" style="max-height: 150px; overflow-y: auto; background: var(--bg-color); padding: 5px; border-radius: 4px; margin-top: 5px;">
-                            <!-- Checkboxes populated dynamically -->
+                    
+                    <div id="drop-zone" class="drop-zone" style="margin-bottom: 10px;">
+                        <p>1. Drag & drop Excel mapping file here</p>
+                        <input type="file" id="excel-file" accept=".xlsx,.csv" style="display: none;">
+                    </div>
+                    <div id="zip-drop-zone" class="drop-zone">
+                        <p>2. Drag & drop ZIP file (Audio files) here</p>
+                        <input type="file" id="zip-file" accept=".zip" style="display: none;">
+                    </div>
+                    <div id="upload-status" style="margin-top: 10px; font-size: 0.9rem;"></div>
+                    
+                    <!-- Preview Table Container -->
+                    <div id="import-preview-container" style="display: none; margin-top: 15px; border: 1px solid var(--accent-color); padding: 10px; border-radius: 4px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                            <h3 style="margin: 0; font-size: 1rem;">Import Preview</h3>
+                            <button type="button" id="cancel-import-btn" style="background-color: var(--border-color); padding: 0.2rem 0.5rem;">Cancel</button>
                         </div>
+                        <div id="import-errors" style="color: var(--error); margin-bottom: 10px; font-size: 0.85rem; white-space: pre-wrap;"></div>
+                        <div style="max-height: 200px; overflow-y: auto; background: var(--bg-color); border-radius: 4px; margin-bottom: 10px;">
+                            <table style="width: 100%; border-collapse: collapse; font-size: 0.85rem;" id="preview-table">
+                                <thead style="position: sticky; top: 0; background: var(--panel-bg);">
+                                    <tr style="border-bottom: 1px solid #444; text-align: left;">
+                                        <th style="padding: 5px;">Suite Name</th>
+                                        <th style="padding: 5px;">Cases</th>
+                                        <th style="padding: 5px;">Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="preview-table-body">
+                                </tbody>
+                            </table>
+                        </div>
+                        <button type="button" id="confirm-import-btn" disabled style="width: 100%;">Confirm & Save</button>
                     </div>
-                    <button type="submit" style="margin-top: 10px;">Create Suite</button>
-                </form>
+                </section>
+            </div>
+        </div>
 
-                <div class="test-list" id="suite-list">
-                    <!-- Suites will be populated here -->
+        <div class="bottom-section">
+            <section class="panel" id="combined-list-panel">
+                <h2>Test Suites & Test Cases</h2>
+                <div class="combined-list" id="combined-list">
+                    <!-- Items will be populated here -->
                 </div>
             </section>
         </div>
 
-        <div class="column main-col">
-            <!-- Test Runner Panel -->
-            <section class="panel" id="runner-panel">
-                <h2>Test Execution</h2>
-                <div style="margin-bottom: 10px;">
-                    <label for="executor-name">Executed By: </label>
-                    <input type="text" id="executor-name" placeholder="Your Name" value="Auto" required>
-                </div>
-                <div style="margin-bottom: 10px;">
-                    <label for="agent-select">Target PC Agent: </label>
-                    <select id="agent-select" style="padding: 4px; border-radius: 4px; background: var(--bg-color); color: var(--text-color); border: 1px solid var(--border-color);">
-                        <option value="auto">Auto-assign (Idle Agent)</option>
-                    </select>
-                </div>
-                <div class="runner-status" id="runner-status">
-                    Ready to run tests. Select a paired device and click 'Run Test' on a test case.
-                </div>
-                <!-- Execution history log -->
-                <div style="margin-top: 15px;">
-                    <h3>Run History</h3>
-                    <div id="history-list" style="max-height: 200px; overflow-y: auto; background: var(--bg-color); padding: 5px; border-radius: 4px;">
-                        <!-- Runs populated here -->
+        <!-- Modal for Test Creation -->
+        <div id="test-modal" class="modal">
+            <div class="modal-content panel">
+                <span class="close-btn">&times;</span>
+                <h2>Create Test Case</h2>
+                <form id="add-test-form">
+                    <input type="text" id="test-name" placeholder="Test Name" required style="margin-bottom: 10px;">
+                    <textarea id="test-utterance" placeholder="Utterance" required style="width: 100%; box-sizing: border-box; padding: 10px; margin-bottom: 10px;"></textarea>
+                    
+                    <div id="audio-drop-zone" class="drop-zone" style="margin-bottom: 10px; padding: 20px;">
+                        <p>Drag & drop Audio file here</p>
+                        <p id="audio-file-name" style="color: var(--accent-color); font-weight: bold;"></p>
+                        <input type="file" id="test-audio-file" accept="audio/*" style="display: none;">
                     </div>
-                </div>
-            </section>
 
-            <!-- Video Gallery -->
-            <section class="panel" id="gallery-panel">
-                <h2>Recordings</h2>
-                <div class="gallery" id="gallery">
-                    <!-- Videos will be populated here -->
-                </div>
-            </section>
+                    <input type="text" id="test-desc" placeholder="Description (optional)" style="margin-bottom: 10px;">
+                    <button type="submit" style="margin-top: 10px; width: 100%;">Add Test</button>
+                </form>
+            </div>
         </div>
     </main>
 
