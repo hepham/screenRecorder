@@ -158,6 +158,7 @@ function renderSuites() {
                 <div style="font-size: 0.8rem; color: #aaa;">${caseCount} cases</div>
             </div>
             <div class="test-actions">
+                <button style="background-color: var(--accent-color);" onclick="window.open('/verify.html?suite_id=${suite.id}', '_blank')">Verify</button>
                 <button onclick="runSuite('${suite.id}')">Run</button>
                 <button onclick="queueSuite('${suite.id}')">Queue</button>
                 <button style="background-color: var(--error);" onclick="deleteSuite('${suite.id}')">Del</button>
