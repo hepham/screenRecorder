@@ -20,7 +20,7 @@ AGENT_ID = f"pc-agent-{socket.gethostname()}"
 async def play_audio(audio_url: str):
     logger.info(f"Downloading audio from {audio_url}")
     try:
-        r = requests.get(audio_url)
+        r = requests.get(audio_url, timeout=30)
         r.raise_for_status()
         filename = "temp_audio.mp3"
         with open(filename, "wb") as f:

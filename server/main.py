@@ -22,7 +22,20 @@ os.makedirs("audios", exist_ok=True)
 
 # Mount static files for recordings playback
 app.mount("/recordings", StaticFiles(directory="recordings"), name="recordings")
-app.mount("/audios", StaticFiles(directory="audios"), name="audios")
+
+# Serve audio files via explicit route to handle Unicode filenames on Windows
+# (StaticFiles hangs on percent-encoded non-ASCII paths)
+from fastapi.responses import FileResponse
+from urllib.parse import unquote
+
+@app.get("/audios/{filename:path}")
+async def serve_audio(filename: str):
+    decoded = unquote(filename)
+    file_path = os.path.join("audios", decoded)
+    if not os.path.isfile(file_path):
+        from fastapi import HTTPException
+        raise HTTPException(status_code=404, detail="Audio file not found")
+    return FileResponse(file_path, media_type="audio/mpeg")
 
 app.include_router(ws.router, prefix="/ws", tags=["websocket"])
 app.include_router(api.router, prefix="/api", tags=["api"])
