@@ -9,10 +9,10 @@
 
 ## Phase 2: Hybrid Test Suite Assignment (Backend)
 <!-- execution: sequential -->
-- [ ] Task 1: Cập nhật logic chạy bộ test (vd: `server/routes/upload.py` hoặc runner) để nhận thêm tham số `agent_id` (ID cụ thể hoặc chuỗi `"auto"`).
-- [ ] Task 2: Implement logic "Auto-assign": tự động tìm một PC Agent đang `idle` nếu yêu cầu gửi lên là `"auto"`.
-- [ ] Task 3: Xử lý các luồng trả trạng thái (chuyển lại thành `idle` khi test xong/lỗi) và báo lỗi nếu không có Agent nào rảnh.
-- [ ] Task: Conductor - User Manual Verification 'Phase 2: Hybrid Test Suite Assignment (Backend)' (Protocol in workflow.md)
+- [x] Task 1: Cập nhật logic chạy bộ test (vd: `server/routes/upload.py` hoặc runner) để nhận thêm tham số `agent_id` (ID cụ thể hoặc chuỗi `"auto"`).
+- [x] Task 2: Implement logic "Auto-assign": tự động tìm một PC Agent đang `idle` nếu yêu cầu gửi lên là `"auto"`.
+- [x] Task 3: Xử lý các luồng trả trạng thái (chuyển lại thành `idle` khi test xong/lỗi) và báo lỗi nếu không có Agent nào rảnh.
+- [x] Task: Conductor - User Manual Verification 'Phase 2: Hybrid Test Suite Assignment (Backend)' (Protocol in workflow.md)
 
 ## Phase 3: Dashboard UI & Agent Selection (Frontend)
 <!-- execution: sequential -->

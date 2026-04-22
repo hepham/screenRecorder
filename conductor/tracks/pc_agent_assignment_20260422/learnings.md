@@ -18,3 +18,11 @@ Patterns, gotchas, and context discovered during implementation.
   - Context: PC Agent already reported \idle\ and \unning_test\ by default in \client/pc_agent.py\, so no modifications were needed on the client-side for this phase.
   - Context: Server \ConnectionManager\ handles agent connections and correctly models agents as \DeviceInfo\ using Pydantic, which made \GET /api/agents\ easy to return.
 ---
+## [2026-04-22 13:15] - Phase 2: Hybrid Test Suite Assignment (Backend)
+- **Implemented:** Updated create_suite_run and create_test_run in server/engine/runner.py to accept gent_id=" auto.
+## [2026-04-22 13:15] - Phase 2: Hybrid Test Suite Assignment (Backend)
+- **Implemented:** Updated create_suite_run and create_test_run in server/engine/runner.py to accept agent_id="auto". If "auto" is provided, the server scans manager.devices for a connected PC_AGENT that is currently IDLE.
+- **Files changed:** server/engine/runner.py
+- **Learnings:**
+  - Pattern: Pushing the search logic down to create_test_run and create_suite_run means any API that initiates runs automatically gains the "auto" capability without further modification.
+---

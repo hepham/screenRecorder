@@ -33,9 +33,17 @@ async def create_test_run(test_id: str, agent_id: str, suite_id: str = None, exe
     if not test_case:
         raise ValueError("Test case not found")
         
-    if agent_id not in manager.devices or manager.devices[agent_id].status != DeviceStatus.IDLE:
+    actual_agent_id = agent_id
+    if agent_id == "auto":
+        actual_agent_id = None
+        for dev_id, dev in manager.devices.items():
+            if dev.role == DeviceRole.PC_AGENT and dev.status == DeviceStatus.IDLE:
+                actual_agent_id = dev_id
+                break
+        if not actual_agent_id:
+            raise ValueError("No idle PC agent available for auto-assignment")
+    elif agent_id not in manager.devices or manager.devices[agent_id].status != DeviceStatus.IDLE:
         raise ValueError(f"Agent {agent_id} is not online or not idle")
-
     test_run_id = str(uuid.uuid4())
     run_status = TestRunStatus(
         test_run_id=test_run_id,
@@ -46,7 +54,7 @@ async def create_test_run(test_id: str, agent_id: str, suite_id: str = None, exe
         executed_by=executed_by
     )
     test_runs[test_run_id] = run_status
-    return run_status, agent_id
+    return run_status, actual_agent_id
 
 async def execute_test_run(run_status: TestRunStatus, agent_id: str, audio_url: str):
     try:
@@ -88,7 +96,16 @@ async def create_suite_run(suite_id: str, agent_id: str, executed_by: str = None
     if not suite:
         raise ValueError("Suite not found")
         
-    if agent_id not in manager.devices or manager.devices[agent_id].status != DeviceStatus.IDLE:
+    actual_agent_id = agent_id
+    if agent_id == "auto":
+        actual_agent_id = None
+        for dev_id, dev in manager.devices.items():
+            if dev.role == DeviceRole.PC_AGENT and dev.status == DeviceStatus.IDLE:
+                actual_agent_id = dev_id
+                break
+        if not actual_agent_id:
+            raise ValueError("No idle PC agent available for auto-assignment")
+    elif agent_id not in manager.devices or manager.devices[agent_id].status != DeviceStatus.IDLE:
         raise ValueError(f"Agent {agent_id} is not online or not idle")
 
     run_statuses = []
@@ -109,7 +126,7 @@ async def create_suite_run(suite_id: str, agent_id: str, executed_by: str = None
         test_runs[test_run_id] = run_status
         run_statuses.append(run_status)
         
-    return run_statuses, agent_id
+    return run_statuses, actual_agent_id
 
 async def execute_suite_run(run_statuses: list[TestRunStatus], agent_id: str):
     try:
