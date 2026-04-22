@@ -1,0 +1,174 @@
+import asyncio
+import websockets
+import json
+import subprocess
+import time
+import uuid
+import os
+import requests
+import logging
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+SERVER_URL = "ws://127.0.0.1:8000/ws/agent"
+API_URL = "http://127.0.0.1:8000/api"
+AGENT_ID = f"pc-agent-{uuid.uuid4().hex[:6]}"
+
+async def play_audio(audio_url: str):
+    logger.info(f"Downloading audio from {audio_url}")
+    try:
+        r = requests.get(audio_url)
+        r.raise_for_status()
+        filename = "temp_audio.mp3"
+        with open(filename, "wb") as f:
+            f.write(r.content)
+            
+        logger.info("Playing audio...")
+        # Note: Depending on OS, you might need a different command
+        # Windows: start, macOS: afplay, Linux: aplay/ffplay
+        if os.name == 'nt':
+            os.system(f"start {filename}")
+        else:
+            subprocess.run(["ffplay", "-nodisp", "-autoexit", filename], stderr=subprocess.DEVNULL)
+            
+    except Exception as e:
+        logger.error(f"Error playing audio: {e}")
+
+agent_status = "idle"
+
+async def run_suite(suite_id: str, tests: list, ws):
+    global agent_status
+    if agent_status != "idle":
+        logger.warning(f"Agent busy, ignoring suite {suite_id}")
+        return
+        
+    agent_status = "running_test"
+    logger.info(f"Starting suite {suite_id} with {len(tests)} tests")
+    
+    for test in tests:
+        test_run_id = test.get("test_run_id")
+        audio_url = test.get("audio_url")
+        logger.info(f"Running suite test {test_run_id}")
+        await run_test_logic(test_run_id, audio_url, ws)
+        
+    logger.info(f"Suite {suite_id} completed")
+    agent_status = "idle"
+    if ws:
+        await ws.send(json.dumps({"status": "idle"}))
+
+async def run_test_logic(test_run_id: str, audio_url: str, ws):
+    if ws:
+        await ws.send(json.dumps({"status": "running_test"}))
+    
+    record_path = f"/sdcard/{test_run_id}.mp4"
+    logger.info(f"Starting adb screenrecord to {record_path}")
+    record_proc = subprocess.Popen(["adb", "shell", "screenrecord", record_path])
+    
+    await asyncio.sleep(2)
+    asyncio.create_task(play_audio(audio_url))
+    
+    logger.info("Waiting 15 seconds for test to complete (shortened for demo)...")
+    await asyncio.sleep(15) # Wait 15 seconds instead of 60s to speed up tests during dev
+    
+    logger.info("Stopping screenrecord")
+    record_proc.terminate()
+    try:
+        record_proc.wait(timeout=5)
+    except subprocess.TimeoutExpired:
+        record_proc.kill()
+    
+    subprocess.run(["adb", "shell", "pkill", "-2", "screenrecord"])
+    await asyncio.sleep(2)
+    
+    local_file = f"{test_run_id}.mp4"
+    logger.info(f"Pulling file from device: {local_file}")
+    subprocess.run(["adb", "pull", record_path, local_file])
+    
+    if os.path.exists(local_file):
+        logger.info("Uploading video to server...")
+        with open(local_file, "rb") as f:
+            files = {"file": (local_file, f, "video/mp4")}
+            data = {"device_id": AGENT_ID, "test_run_id": test_run_id}
+            res = requests.post(f"{API_URL}/upload", files=files, data=data)
+            if res.status_code == 200:
+                logger.info("Upload complete!")
+                if ws:
+                    await ws.send(json.dumps({"status": "upload_complete"}))
+            else:
+                logger.error(f"Upload failed: {res.text}")
+                
+        os.remove(local_file)
+        subprocess.run(["adb", "shell", "rm", record_path])
+    else:
+        logger.error("Recorded file not found locally after pull!")
+
+async def run_test(test_run_id: str, audio_url: str, ws):
+    global agent_status
+    if agent_status != "idle":
+        logger.warning(f"Agent busy, ignoring test {test_run_id}")
+        return
+        
+    agent_status = "running_test"
+    await run_test_logic(test_run_id, audio_url, ws)
+    agent_status = "idle"
+    if ws:
+        await ws.send(json.dumps({"status": "idle"}))
+
+async def auto_poll_queue(ws):
+    global agent_status
+    while True:
+        await asyncio.sleep(5)
+        if agent_status == "idle":
+            try:
+                res = requests.get(f"{API_URL}/agent/queue")
+                if res.status_code == 200:
+                    data = res.json()
+                    suite = data.get("suite")
+                    if suite:
+                        executed_by = data.get("executed_by")
+                        logger.info(f"Auto-polled suite {suite['id']}")
+                        # We need to tell the server to create test runs for this suite!
+                        # Wait, the queue just pops the suite. We need to "run" it via the server to get test_run_ids.
+                        # Wait, we can just POST to /api/suites/{suite_id}/run with our agent_id
+                        logger.info(f"Triggering suite run on server...")
+                        requests.post(f"{API_URL}/suites/{suite['id']}/run?agent_id={AGENT_ID}&executed_by={executed_by}")
+                        # The server will then send us a "run_suite" command over WebSocket!
+                        # We don't run it here directly. We just triggered it.
+            except Exception as e:
+                logger.error(f"Error polling queue: {e}")
+
+async def main():
+    url = f"{SERVER_URL}/{AGENT_ID}"
+    logger.info(f"Connecting to {url}")
+    
+    poll_task = None
+    
+    while True:
+        try:
+            async with websockets.connect(url) as ws:
+                logger.info("Connected to server")
+                await ws.send(json.dumps({"status": "idle"}))
+                
+                if not poll_task:
+                    poll_task = asyncio.create_task(auto_poll_queue(ws))
+                
+                async for message in ws:
+                    data = json.loads(message)
+                    logger.info(f"Received action: {data.get('action')}")
+                    
+                    if data.get("action") == "run_test":
+                        test_run_id = data.get("test_run_id")
+                        audio_url = data.get("audio_url")
+                        asyncio.create_task(run_test(test_run_id, audio_url, ws))
+                    elif data.get("action") == "run_suite":
+                        suite_id = data.get("suite_id")
+                        tests = data.get("tests", [])
+                        asyncio.create_task(run_suite(suite_id, tests, ws))
+                        
+        except Exception as e:
+            logger.error(f"Connection error: {e}. Reconnecting in 5s...")
+            await asyncio.sleep(5)
+
+if __name__ == "__main__":
+    asyncio.run(main())

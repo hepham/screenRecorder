@@ -39,4 +39,11 @@ Patterns, gotchas, and context discovered during implementation.
 - **Commit:** 1de5f3b
 - **Learnings:**
   - UI Pattern: Polling `/api/runs` and mapping `suite_id` allows the dashboard to compute progress `(completed/total)` dynamically without server-side tracking logic.
+
+## [2026-04-22 17:05] - Phase 3 Tasks 1-2: PC Agent Updates
+- **Implemented:** Added `auto_poll_queue` to PC Agent and implemented `run_suite` logic to iterate through tests sequentially.
+- **Files changed:** `client/pc_agent.py`
+- **Commit:** 21da0f5
+- **Learnings:**
+  - Architecture: PC Agent auto-polling makes the system resilient. When a suite is retrieved, the Agent simply POSTs to the server to trigger `run_suite`, shifting the state management burden safely back to the server.
 ---
