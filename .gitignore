@@ -1,1 +1,6 @@
-venv/n__pycache__/n.agents/n.beads/n
+venv/
+__pycache__/
+.agents/
+.beads/
+recordings/
+*.pyc
