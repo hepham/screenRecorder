@@ -84,6 +84,71 @@ async def report_test_failure(test_run_id: str, reason: str, ws):
             "reason": reason
         }))
 
+async def wait_for_scrcpy_ready(proc: subprocess.Popen, timeout: float = 10.0) -> bool:
+    """Reads stderr of the process to find 'Recording started' with a timeout."""
+    def read_stderr():
+        while True:
+            line = proc.stderr.readline()
+            if not line:
+                break
+            decoded_line = line.decode(errors="replace").strip()
+            if decoded_line:
+                logger.info(f"[scrcpy stderr] {decoded_line}")
+            if "Recording started" in decoded_line:
+                return True
+        return False
+        
+    try:
+        # Run the blocking read in a separate thread
+        ready = await asyncio.wait_for(asyncio.to_thread(read_stderr), timeout=timeout)
+        return ready
+    except asyncio.TimeoutError:
+        return False
+
+async def start_scrcpy_with_retry(local_file: str, max_retries: int = 2):
+    """Starts scrcpy with retries if it fails to report 'Recording started'."""
+    for attempt in range(max_retries):
+        logger.info(f"Starting scrcpy to record to {local_file} (Attempt {attempt+1}/{max_retries})")
+        if os.name == 'nt':
+            record_proc = subprocess.Popen(
+                ["scrcpy", "--no-playback", "--record", local_file],
+                creationflags=subprocess.CREATE_NEW_PROCESS_GROUP,
+                stderr=subprocess.PIPE
+            )
+        else:
+            record_proc = subprocess.Popen(
+                ["scrcpy", "--no-playback", "--record", local_file],
+                stderr=subprocess.PIPE
+            )
+            
+        ready = await wait_for_scrcpy_ready(record_proc)
+        
+        if ready:
+            logger.info("scrcpy is ready and recording.")
+            return record_proc, True
+            
+        logger.warning(f"scrcpy failed to start recording within timeout on attempt {attempt+1}.")
+        # Kill and cleanup
+        if os.name == 'nt':
+            record_proc.send_signal(signal.CTRL_BREAK_EVENT)
+        else:
+            record_proc.terminate()
+            
+        try:
+            record_proc.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            record_proc.kill()
+            
+        if os.path.exists(local_file):
+            try:
+                os.remove(local_file)
+            except Exception as e:
+                logger.warning(f"Could not remove partial file {local_file}: {e}")
+                
+        await asyncio.sleep(2) # brief pause before retry
+        
+    return None, False
+
 async def run_test_logic(test_run_id: str, audio_url: str, ws, suite_id: str = None, progress: str = None):
     if ws:
         msg = {"status": "running_test"}
@@ -103,31 +168,17 @@ async def run_test_logic(test_run_id: str, audio_url: str, ws, suite_id: str = N
         return
     
     local_file = f"{test_run_id}.mp4"
-    logger.info(f"Starting scrcpy to record to {local_file}")
     
-    if os.name == 'nt':
-        record_proc = subprocess.Popen(
-            ["scrcpy", "--no-playback", "--record", local_file],
-            creationflags=subprocess.CREATE_NEW_PROCESS_GROUP,
-            stderr=subprocess.PIPE
-        )
-    else:
-        record_proc = subprocess.Popen(
-            ["scrcpy", "--no-playback", "--record", local_file],
-            stderr=subprocess.PIPE
-        )
-    
-    # Give scrcpy a moment to start, then check if it's still running
-    await asyncio.sleep(2)
-    if record_proc.poll() is not None:
-        stderr_output = record_proc.stderr.read().decode(errors="replace") if record_proc.stderr else ""
+    record_proc, success = await start_scrcpy_with_retry(local_file)
+    if not success:
         await report_test_failure(
             test_run_id,
-            f"scrcpy failed to start: {stderr_output.strip()}",
+            "scrcpy failed to start and initialize recording after multiple retries.",
             ws
         )
         return
     
+    # Only start playing audio AFTER scrcpy is fully ready and recording
     asyncio.create_task(play_audio(audio_url))
     
     logger.info("Waiting 15 seconds for test to complete (shortened for demo)...")

@@ -1,0 +1,18 @@
+{
+  "track_id": "fix_scrcpy_order_20260423",
+  "type": "bug",
+  "status": "new",
+  "priority": "critical",
+  "depends_on": [],
+  "estimated_hours": null,
+  "created_at": "2026-04-23T02:39:58+07:00",
+  "updated_at": "2026-04-23T02:42:22+07:00",
+  "description": "Fix execution order: scrcpy must be confirmed ready before audio playback starts",
+  "beads_epic": "recordScreen-e1e",
+  "beads_tasks": {
+    "phase1": "recordScreen-e1e.1",
+    "phase1_task1": "recordScreen-e1e.1.1",
+    "phase1_task2": "recordScreen-e1e.1.2",
+    "phase1_task3": "recordScreen-e1e.1.3"
+  }
+}

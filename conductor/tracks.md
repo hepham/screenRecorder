@@ -46,3 +46,8 @@ Active development tracks for Remote Screen Recorder.
 
 ## [x] Track: Fix asyncio.create_task crash in BackgroundTasks
 *Link: [./conductor/tracks/fix_async_background_20260423/](./conductor/tracks/fix_async_background_20260423/)*
+
+---
+
+## [x] Track: Fix Execution Order — scrcpy Must Be Ready Before Audio Playback
+*Link: [./conductor/tracks/fix_scrcpy_order_20260423/](./conductor/tracks/fix_scrcpy_order_20260423/)*
