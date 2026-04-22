@@ -17,23 +17,23 @@ API_URL = "http://192.168.1.5:8000/api"
 import socket
 AGENT_ID = f"pc-agent-{socket.gethostname()}"
 
-async def play_audio(audio_url: str):
+def _download_and_play_audio(audio_url: str):
+    """Sync function to download and play audio (runs in a thread)."""
     logger.info(f"Downloading audio from {audio_url}")
+    r = requests.get(audio_url, timeout=30)
+    r.raise_for_status()
+    filename = "temp_audio.mp3"
+    with open(filename, "wb") as f:
+        f.write(r.content)
+    logger.info("Playing audio...")
+    if os.name == 'nt':
+        os.system(f"start {filename}")
+    else:
+        subprocess.run(["ffplay", "-nodisp", "-autoexit", filename], stderr=subprocess.DEVNULL)
+
+async def play_audio(audio_url: str):
     try:
-        r = requests.get(audio_url, timeout=30)
-        r.raise_for_status()
-        filename = "temp_audio.mp3"
-        with open(filename, "wb") as f:
-            f.write(r.content)
-            
-        logger.info("Playing audio...")
-        # Note: Depending on OS, you might need a different command
-        # Windows: start, macOS: afplay, Linux: aplay/ffplay
-        if os.name == 'nt':
-            os.system(f"start {filename}")
-        else:
-            subprocess.run(["ffplay", "-nodisp", "-autoexit", filename], stderr=subprocess.DEVNULL)
-            
+        await asyncio.to_thread(_download_and_play_audio, audio_url)
     except Exception as e:
         logger.error(f"Error playing audio: {e}")
 
@@ -74,11 +74,11 @@ async def run_test_logic(test_run_id: str, audio_url: str, ws, suite_id: str = N
     
     if os.name == 'nt':
         record_proc = subprocess.Popen(
-            ["scrcpy", "--no-display", "--record", local_file],
+            ["scrcpy", "--no-playback", "--record", local_file],
             creationflags=subprocess.CREATE_NEW_PROCESS_GROUP
         )
     else:
-        record_proc = subprocess.Popen(["scrcpy", "--no-display", "--record", local_file])
+        record_proc = subprocess.Popen(["scrcpy", "--no-playback", "--record", local_file])
     
     await asyncio.sleep(2)
     asyncio.create_task(play_audio(audio_url))

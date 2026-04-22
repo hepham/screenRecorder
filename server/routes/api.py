@@ -1,5 +1,5 @@
 from server.engine.runner import create_test_run, execute_test_run, get_test_runs, get_test_run, TestRunStatus
-from fastapi import APIRouter, HTTPException, BackgroundTasks
+from fastapi import APIRouter, HTTPException, BackgroundTasks, Request
 from typing import List
 from server.models.test_case import TestCase, TestCaseCreate, get_all_tests, create_test, get_test, delete_test
 
@@ -20,6 +20,7 @@ import time
 
 @router.post("/tests/upload", response_model=TestCase)
 async def upload_test(
+    request: Request,
     name: str = Form(...),
     utterance: str = Form(...),
     description: str = Form(""),
@@ -34,7 +35,7 @@ async def upload_test(
         while content := await audio.read(1024 * 1024):
             await out_file.write(content)
 
-    audio_url = f"http://127.0.0.1:8000/audios/{filename}" # Assuming local server for now, or just /audios/filename
+    audio_url = f"http://{request.headers.get('host', request.base_url.netloc)}/audios/{filename}"
     
     test_case_data = TestCaseCreate(
         name=name,
@@ -168,6 +169,7 @@ import shutil
 
 @router.post("/test-suites/confirm-import")
 async def confirm_import_suites(
+    request: Request,
     suites_json: str = Form(...),
     zip_file: UploadFile = File(None)
 ):
@@ -217,7 +219,7 @@ async def confirm_import_suites(
                 if tc.audio and tc.audio in extracted_files:
                     # Move or just link to it
                     rel_path = os.path.relpath(extracted_files[tc.audio], "audios").replace("\\", "/")
-                    audio_url = f"http://127.0.0.1:8000/audios/{rel_path}"
+                    audio_url = f"http://{request.headers.get('host', request.base_url.netloc)}/audios/{rel_path}"
 
                 new_tc = create_test(TestCaseCreate(
                     name=tc.utterance[:50] + ("..." if len(tc.utterance) > 50 else ""),
