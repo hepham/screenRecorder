@@ -55,6 +55,27 @@ function connectWebSocket() {
 // Render Devices
 function renderDevices() {
     deviceList.innerHTML = '';
+    
+    const agentSelect = document.getElementById('agent-select');
+    if (agentSelect) {
+        const currentVal = agentSelect.value;
+        agentSelect.innerHTML = '<option value="auto">Auto-assign (Idle Agent)</option>';
+        
+        devices.forEach(device => {
+            if (device.role === 'pc_agent' && (device.status === 'online' || device.status === 'idle' || device.status === 'running_test')) {
+                const opt = document.createElement('option');
+                opt.value = device.device_id;
+                opt.textContent = `${device.device_id} (${device.status})`;
+                agentSelect.appendChild(opt);
+            }
+        });
+        
+        // Restore selection if still exists
+        if (Array.from(agentSelect.options).some(o => o.value === currentVal)) {
+            agentSelect.value = currentVal;
+        }
+    }
+    
     devices.forEach(device => {
         const div = document.createElement('div');
         div.className = 'item';
@@ -202,13 +223,9 @@ async function deleteSuite(id) {
 
 // Run Test
 async function runTest(id) {
-    if (devices.length === 0) {
-        alert('No PC Agents connected!');
-        return;
-    }
+    const agentSelect = document.getElementById('agent-select');
+    const agentId = agentSelect ? agentSelect.value : 'auto';
     
-    // For simplicity, pick the first available agent
-    const agentId = devices[0].device_id;
     runnerStatus.textContent = `Starting test on agent ${agentId}...`;
     
     try {
@@ -355,12 +372,8 @@ confirmImportBtn.addEventListener('click', async () => {
 
 // Run Suite
 async function runSuite(id) {
-    if (devices.length === 0) {
-        alert('No PC Agents connected!');
-        return;
-    }
-    
-    const agentId = devices[0].device_id;
+    const agentSelect = document.getElementById('agent-select');
+    const agentId = agentSelect ? agentSelect.value : 'auto';
     const executedBy = document.getElementById('executor-name').value;
     runnerStatus.textContent = `Starting suite on agent ${agentId}...`;
     

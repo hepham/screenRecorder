@@ -26,3 +26,8 @@ Patterns, gotchas, and context discovered during implementation.
 - **Learnings:**
   - Pattern: Pushing the search logic down to create_test_run and create_suite_run means any API that initiates runs automatically gains the "auto" capability without further modification.
 ---
+## [2026-04-22 13:18] - Phase 3: Dashboard UI & Agent Selection (Frontend)
+- **Implemented:** Added a Target PC Agent dropdown to the dashboard. The dropdown dynamically populates with connected agents and defaults to "Auto-assign". Modified both \unTest\ and \unSuite\ functions to extract the target agent from this dropdown.
+- **Files changed:** \server/static/index.html\, \server/static/app.js\`n- **Learnings:**
+  - Context: Used the existing \enderDevices\ hook to keep the dropdown synced with the real-time WebSocket \device_update\ events.
+---

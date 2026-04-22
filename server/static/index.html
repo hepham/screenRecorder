@@ -101,6 +101,12 @@
                     <label for="executor-name">Executed By: </label>
                     <input type="text" id="executor-name" placeholder="Your Name" value="Auto" required>
                 </div>
+                <div style="margin-bottom: 10px;">
+                    <label for="agent-select">Target PC Agent: </label>
+                    <select id="agent-select" style="padding: 4px; border-radius: 4px; background: var(--bg-color); color: var(--text-color); border: 1px solid var(--border-color);">
+                        <option value="auto">Auto-assign (Idle Agent)</option>
+                    </select>
+                </div>
                 <div class="runner-status" id="runner-status">
                     Ready to run tests. Select a paired device and click 'Run Test' on a test case.
                 </div>
