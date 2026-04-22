@@ -18,6 +18,10 @@ pending_suites_queue = []
 def get_all_suites() -> List[TestSuite]:
     return list(test_suites_db.values())
 
+def check_suite_name_exists(name: str) -> bool:
+    return any(suite.name == name for suite in test_suites_db.values())
+
+
 def create_suite(data: TestSuiteCreate) -> TestSuite:
     suite_id = str(uuid.uuid4())
     suite = TestSuite(id=suite_id, **data.model_dump())

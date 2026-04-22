@@ -11,3 +11,8 @@ Active development tracks for Remote Screen Recorder.
 
 ## [x] Track: Test Suite Assignment & User Tracking
 *Link: [./conductor/tracks/test_assignment_20260422/](./conductor/tracks/test_assignment_20260422/)*
+
+---
+
+## [x] Track: Import test suites via Excel
+*Link: [./conductor/archive/excel_import_20260422/](./conductor/archive/excel_import_20260422/)*

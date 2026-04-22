@@ -40,7 +40,40 @@
 
             <!-- Test Suites Panel -->
             <section class="panel" id="suites-panel">
-                <h2>Test Suites</h2>
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <h2>Test Suites</h2>
+                    <button type="button" id="toggle-import-btn" style="font-size: 0.8rem;">Import Excel</button>
+                </div>
+                
+                <!-- Add Excel Import Form -->
+                <form id="import-suite-form" style="display: none; margin-bottom: 15px; border: 1px dashed var(--border-color); padding: 10px; border-radius: 4px;">
+                    <label style="font-size: 0.85rem;">Import from Excel/CSV (Columns: tên bộ test, utterance, audio)</label>
+                    <input type="file" id="excel-file" accept=".xlsx,.csv" required style="margin-bottom: 5px;">
+                    <button type="submit">Preview Import</button>
+                </form>
+                
+                <!-- Preview Table Container -->
+                <div id="import-preview-container" style="display: none; margin-bottom: 15px; border: 1px solid var(--accent-color); padding: 10px; border-radius: 4px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                        <h3 style="margin: 0; font-size: 1rem;">Import Preview</h3>
+                        <button type="button" id="cancel-import-btn" style="background-color: var(--border-color); padding: 0.2rem 0.5rem;">Cancel</button>
+                    </div>
+                    <div id="import-errors" style="color: var(--error); margin-bottom: 10px; font-size: 0.85rem; white-space: pre-wrap;"></div>
+                    <div style="max-height: 200px; overflow-y: auto; background: var(--bg-color); border-radius: 4px; margin-bottom: 10px;">
+                        <table style="width: 100%; border-collapse: collapse; font-size: 0.85rem;" id="preview-table">
+                            <thead style="position: sticky; top: 0; background: var(--panel-bg);">
+                                <tr style="border-bottom: 1px solid #444; text-align: left;">
+                                    <th style="padding: 5px;">Suite Name</th>
+                                    <th style="padding: 5px;">Cases</th>
+                                    <th style="padding: 5px;">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="preview-table-body">
+                            </tbody>
+                        </table>
+                    </div>
+                    <button type="button" id="confirm-import-btn" disabled style="width: 100%;">Confirm & Save</button>
+                </div>
                 
                 <form id="add-suite-form">
                     <input type="text" id="suite-name" placeholder="Suite Name" required>

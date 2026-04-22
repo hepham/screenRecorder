@@ -11,6 +11,7 @@ An automated testing tool for voice assistant QA. The system orchestrates paired
 ## Core Value Proposition
 - **Automated Test Orchestration**: Server-driven test execution with paired devices
 - **Test Suite Management & Batch Execution**: Group individual tests into suites, assign runs to specific users, and leverage PC Agents for auto-polling queue execution.
+- **Bulk Import**: Quickly ingest test suites and cases via Excel/CSV imports.
 - **Video Evidence**: Screen recordings capture exactly what the voice assistant does
 - **Multi-Device Management**: Monitor and control multiple phone pairs from one dashboard
 - **Repeatable Tests**: Store and re-run test cases with consistent audio inputs

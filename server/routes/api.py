@@ -61,6 +61,112 @@ async def retrieve_suite(suite_id: str):
         raise HTTPException(status_code=404, detail="Suite not found")
     return suite
 
+import io
+import pandas as pd
+from fastapi import UploadFile, File
+from server.models.test_suite import check_suite_name_exists
+
+@router.post("/test-suites/parse-import")
+async def parse_import_suites(file: UploadFile = File(...)):
+    if not file.filename.endswith(('.xlsx', '.csv')):
+        raise HTTPException(status_code=400, detail="Invalid file format. Only .xlsx and .csv are supported.")
+        
+    try:
+        contents = await file.read()
+        if file.filename.endswith('.csv'):
+            df = pd.read_csv(io.BytesIO(contents))
+        else:
+            df = pd.read_excel(io.BytesIO(contents))
+            
+        df.columns = df.columns.str.strip().str.lower()
+        
+        required_cols = ['tên bộ test', 'utterance', 'audio']
+        for col in required_cols:
+            if col not in df.columns:
+                raise ValueError(f"Missing required column: {col}")
+                
+        preview_data = []
+        errors = []
+        
+        for suite_name, group in df.groupby('tên bộ test'):
+            if pd.isna(suite_name) or str(suite_name).strip() == '':
+                continue
+                
+            suite_name_str = str(suite_name).strip()
+            
+            is_duplicate = check_suite_name_exists(suite_name_str)
+            if is_duplicate:
+                errors.append(f"Bộ test '{suite_name_str}' đã tồn tại.")
+                
+            cases = []
+            for _, row in group.iterrows():
+                utt = str(row.get('utterance', '')).strip()
+                aud = str(row.get('audio', '')).strip()
+                if str(row.get('utterance')) != 'nan' and utt:
+                    cases.append({
+                        "utterance": utt,
+                        "audio": aud if aud and str(row.get('audio')) != 'nan' else ""
+                    })
+                    
+            preview_data.append({
+                "suite_name": suite_name_str,
+                "is_duplicate": is_duplicate,
+                "test_cases": cases,
+                "case_count": len(cases)
+            })
+            
+        return {
+            "success": True,
+            "preview_data": preview_data,
+            "errors": errors
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error parsing file: {str(e)}")
+
+from pydantic import BaseModel
+
+class ImportTestCaseInfo(BaseModel):
+    utterance: str
+    audio: str
+
+class ImportTestSuiteInfo(BaseModel):
+    suite_name: str
+    test_cases: List[ImportTestCaseInfo]
+
+@router.post("/test-suites/confirm-import")
+async def confirm_import_suites(suites: List[ImportTestSuiteInfo]):
+    from server.models.test_case import create_test, TestCaseCreate
+    from server.models.test_suite import create_suite, TestSuiteCreate, check_suite_name_exists
+    
+    for suite in suites:
+        if check_suite_name_exists(suite.suite_name):
+            raise HTTPException(status_code=400, detail=f"Suite '{suite.suite_name}' already exists.")
+            
+    created_suites = []
+    
+    try:
+        for suite in suites:
+            test_case_ids = []
+            for tc in suite.test_cases:
+                new_tc = create_test(TestCaseCreate(
+                    name=tc.utterance[:50] + ("..." if len(tc.utterance) > 50 else ""),
+                    audio_url=tc.audio,
+                    description=tc.utterance
+                ))
+                test_case_ids.append(new_tc.id)
+                
+            new_suite = create_suite(TestSuiteCreate(
+                name=suite.suite_name,
+                description="Imported from Excel",
+                test_case_ids=test_case_ids
+            ))
+            created_suites.append(new_suite)
+            
+        return {"success": True, "created_count": len(created_suites)}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error saving data: {str(e)}")
+
 @router.delete("/suites/{suite_id}")
 async def remove_suite(suite_id: str):
     if delete_suite(suite_id):
@@ -102,3 +208,8 @@ async def run_suite(suite_id: str, agent_id: str, background_tasks: BackgroundTa
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/runs", response_model=List[TestRunStatus])
+async def list_runs():
+    from server.engine.runner import get_test_runs
+    return get_test_runs()

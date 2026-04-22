@@ -1,0 +1,18 @@
+{
+  "track_id": "excel_import_20260422",
+  "type": "feature",
+  "status": "new",
+  "priority": "critical",
+  "depends_on": [],
+  "estimated_hours": null,
+  "created_at": "2026-04-22T17:22:04+07:00",
+  "updated_at": "2026-04-22T17:22:04+07:00",
+  "description": "Import test suites via Excel for batch import. Format: test suite name, utterance, audio",
+  "beads_epic": "recordScreen-63t",
+  "beads_tasks": {
+    "phase1": "recordScreen-63t.1",
+    "phase2": "recordScreen-63t.2",
+    "phase3": "recordScreen-63t.3",
+    "phase4": "recordScreen-63t.4"
+  }
+}

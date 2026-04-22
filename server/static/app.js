@@ -227,6 +227,121 @@ async function runTest(id) {
     }
 }
 
+// Excel Import Logic
+const toggleImportBtn = document.getElementById('toggle-import-btn');
+const importSuiteForm = document.getElementById('import-suite-form');
+const importPreviewContainer = document.getElementById('import-preview-container');
+const previewTableBody = document.getElementById('preview-table-body');
+const importErrors = document.getElementById('import-errors');
+const confirmImportBtn = document.getElementById('confirm-import-btn');
+const cancelImportBtn = document.getElementById('cancel-import-btn');
+let pendingImportData = null;
+
+toggleImportBtn.addEventListener('click', () => {
+    const isHidden = importSuiteForm.style.display === 'none';
+    importSuiteForm.style.display = isHidden ? 'block' : 'none';
+    if (!isHidden) {
+        importPreviewContainer.style.display = 'none';
+        importSuiteForm.reset();
+    }
+});
+
+cancelImportBtn.addEventListener('click', () => {
+    importPreviewContainer.style.display = 'none';
+    importSuiteForm.style.display = 'none';
+    importSuiteForm.reset();
+    pendingImportData = null;
+});
+
+importSuiteForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const fileInput = document.getElementById('excel-file');
+    if (!fileInput.files.length) return;
+    
+    const formData = new FormData();
+    formData.append('file', fileInput.files[0]);
+    
+    try {
+        const res = await fetch('/api/test-suites/parse-import', {
+            method: 'POST',
+            body: formData
+        });
+        
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || 'Import failed');
+        
+        pendingImportData = data.preview_data;
+        
+        // Render preview table
+        previewTableBody.innerHTML = '';
+        let hasErrors = false;
+        
+        if (data.errors && data.errors.length > 0) {
+            importErrors.textContent = data.errors.join('\n');
+            hasErrors = true;
+        } else {
+            importErrors.textContent = '';
+        }
+        
+        data.preview_data.forEach(suite => {
+            const tr = document.createElement('tr');
+            tr.style.borderBottom = '1px solid #333';
+            
+            if (suite.is_duplicate) {
+                tr.style.color = 'var(--error)';
+                hasErrors = true;
+            }
+            
+            tr.innerHTML = `
+                <td style="padding: 5px;">${suite.suite_name}</td>
+                <td style="padding: 5px;">${suite.case_count}</td>
+                <td style="padding: 5px;">${suite.is_duplicate ? 'Duplicate' : 'Valid'}</td>
+            `;
+            previewTableBody.appendChild(tr);
+        });
+        
+        importPreviewContainer.style.display = 'block';
+        confirmImportBtn.disabled = hasErrors || data.preview_data.length === 0;
+        
+    } catch (e) {
+        alert(e.message);
+    }
+});
+
+confirmImportBtn.addEventListener('click', async () => {
+    if (!pendingImportData) return;
+    
+    confirmImportBtn.disabled = true;
+    confirmImportBtn.textContent = 'Saving...';
+    
+    try {
+        const res = await fetch('/api/test-suites/confirm-import', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(pendingImportData)
+        });
+        
+        if (!res.ok) {
+            const err = await res.json();
+            throw new Error(err.detail || 'Failed to save imported suites');
+        }
+        
+        alert('Suites imported successfully!');
+        importPreviewContainer.style.display = 'none';
+        importSuiteForm.style.display = 'none';
+        importSuiteForm.reset();
+        pendingImportData = null;
+        
+        fetchTests();
+        fetchSuites();
+    } catch (e) {
+        alert(e.message);
+    } finally {
+        confirmImportBtn.disabled = false;
+        confirmImportBtn.textContent = 'Confirm & Save';
+    }
+});
+
 // Run Suite
 async function runSuite(id) {
     if (devices.length === 0) {

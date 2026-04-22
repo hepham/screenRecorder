@@ -4,6 +4,7 @@
 - **Language**: Python 3.11+
 - **Framework**: FastAPI
 - **Data Storage**: In-memory data structures (for MVP)
+- **Data Parsing**: Pandas and openpyxl for Excel/CSV import
 - **WebSocket**: FastAPI native WebSocket support
 - **File Storage**: Local filesystem (configurable)
 - **Video Serving**: FastAPI StaticFiles / StreamingResponse
