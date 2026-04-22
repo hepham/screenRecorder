@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Remote Screen Recorder Dashboard</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <header>
+        <h1>Remote Screen Recorder</h1>
+        <div class="connection-status" id="ws-status">Connecting...</div>
+    </header>
+
+    <main>
+        <div class="column">
+            <!-- Device Management Panel -->
+            <section class="panel" id="device-panel">
+                <h2>Connected PC Agents</h2>
+                <div class="device-list" id="device-list">
+                    <!-- Devices will be populated here -->
+                </div>
+            </section>
+
+            <!-- Test Cases Panel -->
+            <section class="panel" id="tests-panel">
+                <h2>Test Cases</h2>
+                
+                <form id="add-test-form">
+                    <input type="text" id="test-name" placeholder="Test Name" required>
+                    <input type="url" id="test-audio-url" placeholder="Audio URL" required>
+                    <input type="text" id="test-desc" placeholder="Description (optional)">
+                    <button type="submit">Add Test</button>
+                </form>
+
+                <div class="test-list" id="test-list">
+                    <!-- Tests will be populated here -->
+                </div>
+            </section>
+
+            <!-- Test Suites Panel -->
+            <section class="panel" id="suites-panel">
+                <h2>Test Suites</h2>
+                
+                <form id="add-suite-form">
+                    <input type="text" id="suite-name" placeholder="Suite Name" required>
+                    <input type="text" id="suite-desc" placeholder="Description (optional)">
+                    <div style="margin-top: 10px; font-size: 0.9rem;">
+                        <label>Select Test Cases:</label>
+                        <div id="suite-test-selection" style="max-height: 150px; overflow-y: auto; background: var(--bg-color); padding: 5px; border-radius: 4px; margin-top: 5px;">
+                            <!-- Checkboxes populated dynamically -->
+                        </div>
+                    </div>
+                    <button type="submit" style="margin-top: 10px;">Create Suite</button>
+                </form>
+
+                <div class="test-list" id="suite-list">
+                    <!-- Suites will be populated here -->
+                </div>
+            </section>
+        </div>
+
+        <div class="column main-col">
+            <!-- Test Runner Panel -->
+            <section class="panel" id="runner-panel">
+                <h2>Test Execution</h2>
+                <div style="margin-bottom: 10px;">
+                    <label for="executor-name">Executed By: </label>
+                    <input type="text" id="executor-name" placeholder="Your Name" value="Auto" required>
+                </div>
+                <div class="runner-status" id="runner-status">
+                    Ready to run tests. Select a paired device and click 'Run Test' on a test case.
+                </div>
+                <!-- Execution history log -->
+                <div style="margin-top: 15px;">
+                    <h3>Run History</h3>
+                    <div id="history-list" style="max-height: 200px; overflow-y: auto; background: var(--bg-color); padding: 5px; border-radius: 4px;">
+                        <!-- Runs populated here -->
+                    </div>
+                </div>
+            </section>
+
+            <!-- Video Gallery -->
+            <section class="panel" id="gallery-panel">
+                <h2>Recordings</h2>
+                <div class="gallery" id="gallery">
+                    <!-- Videos will be populated here -->
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <script src="app.js"></script>
+</body>
+</html>
