@@ -28,7 +28,28 @@ async def upload_video(
                 await out_file.write(content)
                 
         # Mark test run as completed
-        complete_test_run(test_run_id, filename)
+        run = complete_test_run(test_run_id, filename)
+        
+        from server.ws.device_manager import manager
+        from server.engine.runner import test_runs
+        if run:
+            await manager.broadcast_to_web({
+                "type": "test_run_completed",
+                "test_run_id": test_run_id,
+                "suite_id": run.suite_id,
+                "status": run.status,
+                "video_filename": run.video_filename
+            })
+            
+            # Check if suite is fully completed
+            if run.suite_id:
+                suite_runs = [r for r in test_runs.values() if r.suite_id == run.suite_id]
+                completed_runs = [r for r in suite_runs if r.status == "completed"]
+                if len(completed_runs) == len(suite_runs) and len(suite_runs) > 0:
+                    await manager.broadcast_to_web({
+                        "type": "suite_completed",
+                        "suite_id": run.suite_id
+                    })
         
         return {"success": True, "filename": filename}
     except Exception as e:

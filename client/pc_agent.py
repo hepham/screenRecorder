@@ -7,6 +7,7 @@ import uuid
 import os
 import requests
 import logging
+import signal
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -61,9 +62,16 @@ async def run_test_logic(test_run_id: str, audio_url: str, ws):
     if ws:
         await ws.send(json.dumps({"status": "running_test"}))
     
-    record_path = f"/sdcard/{test_run_id}.mp4"
-    logger.info(f"Starting adb screenrecord to {record_path}")
-    record_proc = subprocess.Popen(["adb", "shell", "screenrecord", record_path])
+    local_file = f"{test_run_id}.mp4"
+    logger.info(f"Starting scrcpy to record to {local_file}")
+    
+    if os.name == 'nt':
+        record_proc = subprocess.Popen(
+            ["scrcpy", "--no-display", "--record", local_file],
+            creationflags=subprocess.CREATE_NEW_PROCESS_GROUP
+        )
+    else:
+        record_proc = subprocess.Popen(["scrcpy", "--no-display", "--record", local_file])
     
     await asyncio.sleep(2)
     asyncio.create_task(play_audio(audio_url))
@@ -71,19 +79,19 @@ async def run_test_logic(test_run_id: str, audio_url: str, ws):
     logger.info("Waiting 15 seconds for test to complete (shortened for demo)...")
     await asyncio.sleep(15) # Wait 15 seconds instead of 60s to speed up tests during dev
     
-    logger.info("Stopping screenrecord")
-    record_proc.terminate()
+    logger.info("Stopping scrcpy")
+    if os.name == 'nt':
+        record_proc.send_signal(signal.CTRL_BREAK_EVENT)
+    else:
+        record_proc.terminate()
+        
     try:
         record_proc.wait(timeout=5)
     except subprocess.TimeoutExpired:
+        logger.warning("scrcpy did not stop gracefully, killing process")
         record_proc.kill()
     
-    subprocess.run(["adb", "shell", "pkill", "-2", "screenrecord"])
     await asyncio.sleep(2)
-    
-    local_file = f"{test_run_id}.mp4"
-    logger.info(f"Pulling file from device: {local_file}")
-    subprocess.run(["adb", "pull", record_path, local_file])
     
     if os.path.exists(local_file):
         logger.info("Uploading video to server...")
@@ -99,9 +107,8 @@ async def run_test_logic(test_run_id: str, audio_url: str, ws):
                 logger.error(f"Upload failed: {res.text}")
                 
         os.remove(local_file)
-        subprocess.run(["adb", "shell", "rm", record_path])
     else:
-        logger.error("Recorded file not found locally after pull!")
+        logger.error("Recorded file not found locally after scrcpy finished!")
 
 async def run_test(test_run_id: str, audio_url: str, ws):
     global agent_status

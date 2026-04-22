@@ -38,6 +38,16 @@ function connectWebSocket() {
         if (data.type === 'device_update') {
             devices = data.devices;
             renderDevices();
+        } else if (data.type === 'suite_started') {
+            const suiteName = testSuites.find(s => s.id === data.suite_id)?.name || data.suite_id;
+            runnerStatus.textContent = `Suite '${suiteName}' started on agent ${data.agent_id} with ${data.total_tests} tests.`;
+            fetchRuns();
+        } else if (data.type === 'test_run_completed') {
+            fetchRuns();
+            fetchRecordings(); // Show new video immediately
+        } else if (data.type === 'suite_completed') {
+            const suiteName = testSuites.find(s => s.id === data.suite_id)?.name || data.suite_id;
+            runnerStatus.textContent = `Suite '${suiteName}' fully completed!`;
         }
     };
 }

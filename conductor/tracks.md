@@ -16,3 +16,8 @@ Active development tracks for Remote Screen Recorder.
 
 ## [x] Track: Import test suites via Excel
 *Link: [./conductor/archive/excel_import_20260422/](./conductor/archive/excel_import_20260422/)*
+
+---
+
+## [x] Track: Real-time update of test suite progress on Web UI using WebSockets
+*Link: [./conductor/archive/realtime_progress_20260422/](./conductor/archive/realtime_progress_20260422/)*

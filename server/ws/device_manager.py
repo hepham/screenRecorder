@@ -60,9 +60,12 @@ class ConnectionManager:
 
     async def broadcast_device_update(self):
         state = self._get_device_state()
+        await self.broadcast_to_web({"type": "device_update", "devices": state})
+
+    async def broadcast_to_web(self, message: dict):
         for connection in self.dashboard_connections:
             try:
-                await connection.send_json({"type": "device_update", "devices": state})
+                await connection.send_json(message)
             except:
                 # Handle disconnected dashboards gracefully
                 pass

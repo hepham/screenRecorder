@@ -1,0 +1,11 @@
+{
+  "track_id": "realtime_progress_20260422",
+  "type": "feature",
+  "status": "new",
+  "priority": "critical",
+  "depends_on": [],
+  "estimated_hours": null,
+  "created_at": "2026-04-22T18:30:53Z",
+  "updated_at": "2026-04-22T18:30:53Z",
+  "description": "Real-time update of test suite progress on Web UI using WebSockets"
+}

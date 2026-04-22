@@ -130,6 +130,13 @@ async def execute_suite_run(run_statuses: list[TestRunStatus], agent_id: str):
         }
         await manager.send_command(agent_id, command)
         
+        await manager.broadcast_to_web({
+            "type": "suite_started",
+            "suite_id": suite_id,
+            "agent_id": agent_id,
+            "total_tests": len(tests_data)
+        })
+        
     except Exception as e:
         logger.error(f"Error during suite execution: {e}")
         for run in run_statuses:
