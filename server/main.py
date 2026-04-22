@@ -1,8 +1,15 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from contextlib import asynccontextmanager
+from server.db import init_db
 
-app = FastAPI(title="Remote Screen Recorder API")
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    await init_db()
+    yield
+
+app = FastAPI(title="Remote Screen Recorder API", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
