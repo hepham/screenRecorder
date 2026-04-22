@@ -18,6 +18,12 @@ class TestRunStatus(BaseModel):
     video_filename: str | None = None
     suite_id: str | None = None
     executed_by: str | None = None
+    verified: bool = False
+    pass_lng: bool | None = None
+    pass_asr: bool | None = None
+    pass_capsule: bool | None = None
+    pass_tts: bool | None = None
+    reason: str | None = None
 
 # Store runs
 test_runs: Dict[str, TestRunStatus] = {}

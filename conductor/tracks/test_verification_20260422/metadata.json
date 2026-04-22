@@ -1,0 +1,11 @@
+{
+  "track_id": "test_verification_20260422",
+  "type": "feature",
+  "status": "new",
+  "priority": "critical",
+  "depends_on": [],
+  "estimated_hours": null,
+  "created_at": "2026-04-22T12:10:00Z",
+  "updated_at": "2026-04-22T12:10:00Z",
+  "description": "phần xem lại video track của từng test, thì vào verify, bên trái có side bar từng test case, bên phải là video, ở dưới sẽ có description người dùng check lại description"
+}

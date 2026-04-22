@@ -213,3 +213,26 @@ async def run_suite(suite_id: str, agent_id: str, background_tasks: BackgroundTa
 async def list_runs():
     from server.engine.runner import get_test_runs
     return get_test_runs()
+
+class TestRunVerificationUpdate(BaseModel):
+    pass_lng: bool | None = None
+    pass_asr: bool | None = None
+    pass_capsule: bool | None = None
+    pass_tts: bool | None = None
+    reason: str | None = None
+
+@router.put("/runs/{run_id}/verify", response_model=TestRunStatus)
+async def verify_test_run(run_id: str, update: TestRunVerificationUpdate):
+    from server.engine.runner import get_test_run
+    run = get_test_run(run_id)
+    if not run:
+        raise HTTPException(status_code=404, detail="Test run not found")
+        
+    run.verified = True
+    run.pass_lng = update.pass_lng
+    run.pass_asr = update.pass_asr
+    run.pass_capsule = update.pass_capsule
+    run.pass_tts = update.pass_tts
+    run.reason = update.reason
+    
+    return run
