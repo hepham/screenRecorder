@@ -84,78 +84,41 @@ async def report_test_failure(test_run_id: str, reason: str, ws):
             "reason": reason
         }))
 
-async def wait_for_scrcpy_ready(local_file: str, proc: subprocess.Popen, timeout: float = 10.0) -> bool:
-    """Waits until the mp4 file exists and has data written to it."""
-    start_time = time.time()
-    
-    # Consume stdout in background to prevent buffer from filling up
-    async def drain_stream():
-        while True:
-            line = await asyncio.to_thread(proc.stdout.readline)
-            if not line:
-                break
-                
-    if proc.stdout:
-        asyncio.create_task(drain_stream())
-        
-    while time.time() - start_time < timeout:
-        if proc.poll() is not None:
-            return False
-            
-        if os.path.exists(local_file) and os.path.getsize(local_file) > 0:
-            # Wait a tiny bit more to ensure it's actively recording
-            await asyncio.sleep(0.5)
-            return True
-            
-        await asyncio.sleep(0.5)
-        
-    return False
 
 async def start_scrcpy_with_retry(local_file: str, max_retries: int = 2):
-    """Starts scrcpy with retries if it fails to report 'Recording started'."""
+    """Starts scrcpy and waits a few seconds to confirm it is still alive and recording."""
     for attempt in range(max_retries):
         logger.info(f"Starting scrcpy to record to {local_file} (Attempt {attempt+1}/{max_retries})")
         if os.name == 'nt':
             record_proc = subprocess.Popen(
                 ["scrcpy", "--no-playback", "--record", local_file],
-                creationflags=subprocess.CREATE_NEW_PROCESS_GROUP,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.STDOUT
+                creationflags=subprocess.CREATE_NEW_PROCESS_GROUP
             )
         else:
             record_proc = subprocess.Popen(
-                ["scrcpy", "--no-playback", "--record", local_file],
-                stdout=subprocess.PIPE,
-                stderr=subprocess.STDOUT
+                ["scrcpy", "--no-playback", "--record", local_file]
             )
-            
-        ready = await wait_for_scrcpy_ready(local_file, record_proc)
-        
-        if ready:
-            logger.info("scrcpy is ready and recording.")
+
+        # Wait for scrcpy to initialise (it writes directly to the Windows console,
+        # so we can't intercept its output via pipes — we just wait a fixed amount).
+        await asyncio.sleep(3)
+
+        if record_proc.poll() is None:
+            # Process is still running → recording has started successfully
+            logger.info("scrcpy is alive and recording.")
             return record_proc, True
-            
-        logger.warning(f"scrcpy failed to start recording within timeout on attempt {attempt+1}.")
-        # Kill and cleanup
-        if os.name == 'nt':
-            record_proc.send_signal(signal.CTRL_BREAK_EVENT)
-        else:
-            record_proc.terminate()
-            
-        try:
-            record_proc.wait(timeout=5)
-        except subprocess.TimeoutExpired:
-            record_proc.kill()
-            
+
+        logger.warning(f"scrcpy exited early on attempt {attempt+1}.")
         if os.path.exists(local_file):
             try:
                 os.remove(local_file)
             except Exception as e:
                 logger.warning(f"Could not remove partial file {local_file}: {e}")
-                
-        await asyncio.sleep(2) # brief pause before retry
-        
+
+        await asyncio.sleep(1)
+
     return None, False
+
 
 async def run_test_logic(test_run_id: str, audio_url: str, ws, suite_id: str = None, progress: str = None):
     if ws:
