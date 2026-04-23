@@ -21,7 +21,7 @@ async def websocket_agent_endpoint(websocket: WebSocket, agent_id: str):
                     reason = data.get("reason", "Unknown error")
                     if test_run_id:
                         from server.engine.runner import fail_test_run
-                        fail_test_run(test_run_id, reason)
+                        await fail_test_run(test_run_id, reason)
                         await manager.broadcast_to_web({
                             "type": "test_failed",
                             "test_run_id": test_run_id,
@@ -38,7 +38,7 @@ async def websocket_agent_endpoint(websocket: WebSocket, agent_id: str):
                     
                     if suite_id:
                         from server.models.test_suite import get_suite
-                        suite = get_suite(suite_id)
+                        suite = await get_suite(suite_id)
                         if suite:
                             suite_name = suite.name
                             

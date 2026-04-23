@@ -7,11 +7,11 @@ router = APIRouter()
 
 @router.get("/tests", response_model=List[TestCase])
 async def list_tests():
-    return get_all_tests()
+    return await get_all_tests()
 
 @router.post("/tests", response_model=TestCase)
 async def add_test(test: TestCaseCreate):
-    return create_test(test)
+    return await create_test(test)
 
 import os
 import aiofiles
@@ -43,24 +43,24 @@ async def upload_test(
         audio_url=audio_url,
         description=description
     )
-    return create_test(test_case_data)
+    return await create_test(test_case_data)
 
 @router.get("/tests/{test_id}", response_model=TestCase)
 async def retrieve_test(test_id: str):
-    test = get_test(test_id)
+    test = await get_test(test_id)
     if not test:
         raise HTTPException(status_code=404, detail="Test not found")
     return test
 
 @router.delete("/tests/{test_id}")
 async def remove_test(test_id: str):
-    if delete_test(test_id):
+    if await delete_test(test_id):
         return {"success": True}
     raise HTTPException(status_code=404, detail="Test not found")
 
 @router.post("/tests/{test_id}/run", response_model=TestRunStatus)
 async def run_test(test_id: str, agent_id: str, background_tasks: BackgroundTasks):
-    test = get_test(test_id)
+    test = await get_test(test_id)
     if not test:
         raise HTTPException(status_code=404, detail="Test not found")
         
@@ -77,15 +77,15 @@ from server.models.test_suite import TestSuite, TestSuiteCreate, get_all_suites,
 
 @router.get("/suites", response_model=List[TestSuite])
 async def list_suites():
-    return get_all_suites()
+    return await get_all_suites()
 
 @router.post("/suites", response_model=TestSuite)
 async def add_suite(suite: TestSuiteCreate):
-    return create_suite(suite)
+    return await create_suite(suite)
 
 @router.get("/suites/{suite_id}", response_model=TestSuite)
 async def retrieve_suite(suite_id: str):
-    suite = get_suite(suite_id)
+    suite = await get_suite(suite_id)
     if not suite:
         raise HTTPException(status_code=404, detail="Suite not found")
     return suite
@@ -123,7 +123,7 @@ async def parse_import_suites(file: UploadFile = File(...)):
                 
             suite_name_str = str(suite_name).strip()
             
-            is_duplicate = check_suite_name_exists(suite_name_str)
+            is_duplicate = await check_suite_name_exists(suite_name_str)
             if is_duplicate:
                 errors.append(f"Bộ test '{suite_name_str}' đã tồn tại.")
                 
@@ -183,7 +183,7 @@ async def confirm_import_suites(
         raise HTTPException(status_code=400, detail=f"Invalid suites JSON: {str(e)}")
 
     for suite in suites:
-        if check_suite_name_exists(suite.suite_name):
+        if await check_suite_name_exists(suite.suite_name):
             raise HTTPException(status_code=400, detail=f"Suite '{suite.suite_name}' already exists.")
             
     # Handle ZIP extraction
@@ -221,7 +221,7 @@ async def confirm_import_suites(
                     rel_path = os.path.relpath(extracted_files[tc.audio], "audios").replace("\\", "/")
                     audio_url = f"http://{request.headers.get('host', request.base_url.netloc)}/audios/{rel_path}"
 
-                new_tc = create_test(TestCaseCreate(
+                new_tc = await create_test(TestCaseCreate(
                     name=tc.utterance[:50] + ("..." if len(tc.utterance) > 50 else ""),
                     utterance=tc.utterance,
                     audio_url=audio_url,
@@ -229,7 +229,7 @@ async def confirm_import_suites(
                 ))
                 test_case_ids.append(new_tc.id)
                 
-            new_suite = create_suite(TestSuiteCreate(
+            new_suite = await create_suite(TestSuiteCreate(
                 name=suite.suite_name,
                 description="Imported from Excel",
                 test_case_ids=test_case_ids
@@ -242,24 +242,24 @@ async def confirm_import_suites(
 
 @router.delete("/suites/{suite_id}")
 async def remove_suite(suite_id: str):
-    if delete_suite(suite_id):
+    if await delete_suite(suite_id):
         return {"success": True}
     raise HTTPException(status_code=404, detail="Suite not found")
 
 @router.post("/suites/{suite_id}/queue")
 async def queue_suite(suite_id: str, executed_by: str = "Auto"):
-    suite = get_suite(suite_id)
+    suite = await get_suite(suite_id)
     if not suite:
         raise HTTPException(status_code=404, detail="Suite not found")
-    if enqueue_suite(suite_id, executed_by):
+    if await enqueue_suite(suite_id, executed_by):
         return {"success": True, "message": "Suite enqueued"}
     raise HTTPException(status_code=500, detail="Failed to enqueue suite")
 
 @router.get("/agent/queue")
 async def get_agent_queue():
-    item = dequeue_suite()
+    item = await dequeue_suite()
     if item:
-        suite = get_suite(item["suite_id"])
+        suite = await get_suite(item["suite_id"])
         if suite:
             return {"suite": suite, "executed_by": item["executed_by"]}
     return {"suite": None}
@@ -267,7 +267,7 @@ async def get_agent_queue():
 @router.post("/suites/{suite_id}/run")
 async def run_suite(suite_id: str, agent_id: str, background_tasks: BackgroundTasks, executed_by: str = None):
     from server.engine.runner import create_suite_run, execute_suite_run
-    suite = get_suite(suite_id)
+    suite = await get_suite(suite_id)
     if not suite:
         raise HTTPException(status_code=404, detail="Suite not found")
         
