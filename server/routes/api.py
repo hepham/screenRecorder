@@ -283,7 +283,7 @@ async def run_suite(suite_id: str, agent_id: str, background_tasks: BackgroundTa
 @router.get("/runs", response_model=List[TestRunStatus])
 async def list_runs():
     from server.engine.runner import get_test_runs
-    return get_test_runs()
+    return await get_test_runs()
 
 class TestRunVerificationUpdate(BaseModel):
     pass_lng: bool | None = None
@@ -294,19 +294,20 @@ class TestRunVerificationUpdate(BaseModel):
 
 @router.put("/runs/{run_id}/verify", response_model=TestRunStatus)
 async def verify_test_run(run_id: str, update: TestRunVerificationUpdate):
-    from server.engine.runner import get_test_run
-    run = get_test_run(run_id)
+    from server.engine.runner import get_test_run, update_test_run_verification
+    run = await get_test_run(run_id)
     if not run:
         raise HTTPException(status_code=404, detail="Test run not found")
         
-    run.verified = True
-    run.pass_lng = update.pass_lng
-    run.pass_asr = update.pass_asr
-    run.pass_capsule = update.pass_capsule
-    run.pass_tts = update.pass_tts
-    run.reason = update.reason
-    
-    return run
+    return await update_test_run_verification(
+        run_id,
+        True,
+        update.pass_lng,
+        update.pass_asr,
+        update.pass_capsule,
+        update.pass_tts,
+        update.reason
+    )
 
 from server.models.device import DeviceInfo, DeviceRole
 from server.ws.device_manager import manager

@@ -51,3 +51,8 @@ Active development tracks for Remote Screen Recorder.
 
 ## [x] Track: Fix Execution Order — scrcpy Must Be Ready Before Audio Playback
 *Link: [./conductor/tracks/fix_scrcpy_order_20260423/](./conductor/tracks/fix_scrcpy_order_20260423/)*
+
+---
+
+## [~] Track: Test Done-State, Enhanced Verify Page & SQLite Persistence
+*Link: [./conductor/tracks/verify_enhance_20260423/](./conductor/tracks/verify_enhance_20260423/)*

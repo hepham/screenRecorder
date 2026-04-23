@@ -221,3 +221,13 @@ async def execute_suite_run(run_statuses: list[TestRunStatus], agent_id: str):
                 run.status = "failed"
                 await db.execute("UPDATE test_runs SET status=? WHERE id=?", ("failed", run.test_run_id))
             await db.commit()
+
+async def update_test_run_verification(run_id: str, verified: bool, pass_lng: bool | None, pass_asr: bool | None, pass_capsule: bool | None, pass_tts: bool | None, reason: str | None) -> TestRunStatus | None:
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute("""
+            UPDATE test_runs 
+            SET verified=?, pass_lng=?, pass_asr=?, pass_capsule=?, pass_tts=?, reason=?
+            WHERE id=?
+        """, (verified, pass_lng, pass_asr, pass_capsule, pass_tts, reason, run_id))
+        await db.commit()
+    return await get_test_run(run_id)
