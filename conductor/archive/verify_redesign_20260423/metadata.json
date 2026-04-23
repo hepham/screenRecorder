@@ -1,0 +1,11 @@
+{
+  "track_id": "verify_redesign_20260423",
+  "type": "feature",
+  "status": "new",
+  "priority": "critical",
+  "depends_on": [],
+  "estimated_hours": null,
+  "created_at": "2026-04-23T15:28:59+07:00",
+  "updated_at": "2026-04-23T15:28:59+07:00",
+  "description": "sử dụng ui-ux pro max skill, sửa lại giao diện của trang verify, full màn hình, nếu nó là chỉ testcase thì header là tên test case, dưới là video, sau đó là audio, dưới tiếp là utterance, tiếp là validation để theo thứ tự ASR yes no capsule yes no, lng yes no, tts yes no, mấy cái này để chung một dòng, sau đó sẽ là detail infor của capsule id, nó sẽ navigate sang trang khác, dòng cuối là reason cho người dùng nhập"
+}

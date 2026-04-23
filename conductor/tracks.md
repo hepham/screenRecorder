@@ -54,5 +54,10 @@ Active development tracks for Remote Screen Recorder.
 
 ---
 
-## [~] Track: Test Done-State, Enhanced Verify Page & SQLite Persistence
-*Link: [./conductor/tracks/verify_enhance_20260423/](./conductor/tracks/verify_enhance_20260423/)*
+## [x] Track: Test Done-State, Enhanced Verify Page & SQLite Persistence
+*Link: [./conductor/archive/verify_enhance_20260423/](./conductor/archive/verify_enhance_20260423/)*
+
+---
+
+## [x] Track: Verification Page Redesign
+*Link: [./conductor/archive/verify_redesign_20260423/](./conductor/archive/verify_redesign_20260423/)*

@@ -719,6 +719,7 @@ function renderCombinedList() {
         const btnText = isRunning ? 'Running...' : 'Run';
         const btnDisabled = isRunning ? 'disabled' : '';
         const dropdownHtml = getAgentDropdownHtml('tests', test.id);
+        const verifyBtnHtml = `<button style="background-color: var(--accent-color);" onclick="event.stopPropagation(); window.open('/verify.html?test_id=${test.id}', '_blank')">Verify</button>`;
 
         div.innerHTML = `
             <div style="flex: 1;">
@@ -728,6 +729,7 @@ function renderCombinedList() {
             <div style="display: flex; align-items: center; gap: 10px;">
                 ${statusHtml}
                 ${dropdownHtml}
+                ${verifyBtnHtml}
                 <button class="${btnClass}" ${btnDisabled} onclick="event.stopPropagation(); runTestItem('${test.id}')">${btnText}</button>
                 <button style="background-color: var(--error);" onclick="event.stopPropagation(); deleteTest('${test.id}')">Del</button>
             </div>

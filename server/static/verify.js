@@ -1,9 +1,10 @@
 document.addEventListener('DOMContentLoaded', async () => {
     const urlParams = new URLSearchParams(window.location.search);
     const suiteId = urlParams.get('suite_id');
+    const testIdParam = urlParams.get('test_id');
 
-    if (!suiteId) {
-        alert("No Suite ID provided!");
+    if (!suiteId && !testIdParam) {
+        alert("No Suite ID or Test ID provided!");
         return;
     }
 
@@ -43,12 +44,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Load Data
     async function loadData() {
         try {
-            // Fetch suite
-            const suiteRes = await fetch(`/api/suites/${suiteId}`);
-            if (!suiteRes.ok) throw new Error("Suite not found");
-            currentSuite = await suiteRes.json();
-            suiteTitleEl.textContent = `Suite: ${currentSuite.name}`;
-
             // Fetch tests
             const testsRes = await fetch('/api/tests');
             allTests = await testsRes.json();
@@ -57,13 +52,31 @@ document.addEventListener('DOMContentLoaded', async () => {
             const runsRes = await fetch('/api/runs');
             allRuns = await runsRes.json();
 
+            if (suiteId) {
+                // Fetch suite
+                const suiteRes = await fetch(`/api/suites/${suiteId}`);
+                if (!suiteRes.ok) throw new Error("Suite not found");
+                currentSuite = await suiteRes.json();
+                suiteTitleEl.textContent = `Suite: ${currentSuite.name}`;
+            } else if (testIdParam) {
+                const test = allTests.find(t => t.id === testIdParam);
+                if (!test) throw new Error("Test not found");
+                currentSuite = { name: "Individual Test", test_case_ids: [testIdParam] };
+                suiteTitleEl.textContent = `Test Case: ${test.name}`;
+            }
+
             // Map data
             buildTestDataMap();
             renderSidebar();
 
+            // Auto-select if there's only one test case (in individual mode)
+            if (testIdParam && testDataMap.has(testIdParam)) {
+                selectTestCase(testIdParam);
+            }
+
         } catch (e) {
             console.error("Error loading data:", e);
-            suiteTitleEl.textContent = "Error loading suite data";
+            suiteTitleEl.textContent = "Error loading data";
         }
     }
 
@@ -76,8 +89,13 @@ document.addEventListener('DOMContentLoaded', async () => {
             const test = allTests.find(t => t.id === testId);
             if (!test) return;
 
-            // Find all runs for this test in this suite
-            const testRuns = allRuns.filter(r => r.test_id === testId && r.suite_id === suiteId);
+            // Find all runs for this test in this suite (or independent if suiteId is null)
+            let testRuns = [];
+            if (suiteId) {
+                testRuns = allRuns.filter(r => r.test_id === testId && r.suite_id === suiteId);
+            } else {
+                testRuns = allRuns.filter(r => r.test_id === testId && !r.suite_id);
+            }
             
             // Sort by timestamp descending to get the latest
             testRuns.sort((a, b) => b.timestamp - a.timestamp);
@@ -147,14 +165,29 @@ document.addEventListener('DOMContentLoaded', async () => {
         verificationAreaEl.style.display = 'block';
 
         testTitleEl.textContent = data.test.name;
-        testUtteranceEl.textContent = data.test.description || data.test.name;
+        testUtteranceEl.textContent = data.test.utterance || data.test.description || data.test.name;
         testAudioEl.src = data.test.audio_url;
 
+        const capsuleIdDisplay = document.getElementById('capsule-id-display');
+        const capsuleDetailLink = document.getElementById('capsule-detail-link');
+
         if (data.latest_run && data.latest_run.video_filename) {
+            testVideoEl.parentElement.style.display = 'flex';
             testVideoEl.src = `/recordings/${data.latest_run.video_filename}`;
             const date = new Date(data.latest_run.timestamp * 1000).toLocaleString();
             runInfoEl.innerHTML = `Run Date: ${date} <br>Run ID: ${data.latest_run.test_run_id}`;
             
+            // Capsule ID
+            const capsuleId = data.latest_run.capsule_id || data.test.capsule_id || 'N/A';
+            capsuleIdDisplay.textContent = capsuleId;
+            if (capsuleId !== 'N/A') {
+                capsuleDetailLink.href = `/capsules/${capsuleId}`;
+                capsuleDetailLink.style.pointerEvents = 'auto';
+            } else {
+                capsuleDetailLink.removeAttribute('href');
+                capsuleDetailLink.style.pointerEvents = 'none';
+            }
+
             // Load existing verification state
             verificationState.pass_lng = data.latest_run.pass_lng;
             verificationState.pass_asr = data.latest_run.pass_asr;
@@ -164,9 +197,14 @@ document.addEventListener('DOMContentLoaded', async () => {
             
             updateValidationUI();
         } else {
+            testVideoEl.parentElement.style.display = 'none';
             testVideoEl.src = "";
             testVideoEl.removeAttribute('src');
-            runInfoEl.innerHTML = `<span style="color: var(--error);">No completed run available for this test case.</span>`;
+            runInfoEl.innerHTML = `<span style="color: var(--error-color);">No completed run available for this test case.</span>`;
+            
+            capsuleIdDisplay.textContent = data.test.capsule_id || 'N/A';
+            capsuleDetailLink.removeAttribute('href');
+            capsuleDetailLink.style.pointerEvents = 'none';
             
             // Reset state
             verificationState = {
@@ -178,7 +216,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Toggle logic
     document.querySelectorAll('.toggle-btn').forEach(btn => {
-        btn.addEventListener('click', (e) => {
+        btn.addEventListener('click', async (e) => {
             const group = e.target.closest('.toggle-group');
             if (!group) return;
             
@@ -187,11 +225,21 @@ document.addEventListener('DOMContentLoaded', async () => {
             
             verificationState[field] = val;
             updateValidationUI();
+            
+            // Auto-save immediately when a toggle is clicked
+            await autoSaveCurrent();
         });
     });
 
+    let autoSaveTimeout = null;
     reasonInput.addEventListener('input', (e) => {
         verificationState.reason = e.target.value;
+        
+        // Debounce auto-save for text input
+        if (autoSaveTimeout) clearTimeout(autoSaveTimeout);
+        autoSaveTimeout = setTimeout(() => {
+            autoSaveCurrent();
+        }, 1000); // 1s debounce
     });
 
     function updateValidationUI() {
@@ -218,8 +266,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             return;
         }
 
-        saveStatusEl.style.display = 'inline-block';
-        saveStatusEl.textContent = 'Saving...';
+        saveStatusEl.classList.add('visible');
+        saveStatusEl.classList.remove('success', 'error');
+        saveStatusEl.innerHTML = `<svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg> Saving...`;
         
         try {
             const res = await fetch(`/api/runs/${data.latest_run.test_run_id}/verify`, {
@@ -235,20 +284,61 @@ document.addEventListener('DOMContentLoaded', async () => {
             // Update local data
             data.latest_run = updatedRun;
             
-            saveStatusEl.textContent = 'Saved';
-            setTimeout(() => { saveStatusEl.style.display = 'none'; }, 2000);
+            saveStatusEl.innerHTML = `<svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg> Saved`;
+            saveStatusEl.classList.add('success');
+            
+            setTimeout(() => { 
+                saveStatusEl.classList.remove('visible'); 
+            }, 2000);
             
             // Re-render sidebar to update status indicators
             renderSidebar();
             
         } catch (e) {
             console.error("Save error:", e);
-            saveStatusEl.textContent = 'Error saving';
-            saveStatusEl.style.color = 'var(--error)';
+            saveStatusEl.innerHTML = `<svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg> Error saving`;
+            saveStatusEl.classList.add('error');
+            
+            setTimeout(() => { 
+                saveStatusEl.classList.remove('visible'); 
+            }, 3000);
         }
     }
 
-    manualSaveBtn.addEventListener('click', autoSaveCurrent);
+    if (manualSaveBtn) {
+        manualSaveBtn.addEventListener('click', autoSaveCurrent);
+    }
+
+    // Layout Resizer
+    const layoutResizer = document.getElementById('layout-resizer');
+    const sidebarEl = document.getElementById('test-sidebar');
+    let isResizing = false;
+
+    if (layoutResizer && sidebarEl) {
+        layoutResizer.addEventListener('mousedown', (e) => {
+            isResizing = true;
+            document.body.style.cursor = 'col-resize';
+            layoutResizer.classList.add('resizing');
+            e.preventDefault(); // Prevent text selection
+        });
+
+        document.addEventListener('mousemove', (e) => {
+            if (!isResizing) return;
+            // Calculate width as a percentage
+            const newWidth = (e.clientX / window.innerWidth) * 100;
+            if (newWidth >= 15 && newWidth <= 60) {
+                sidebarEl.style.width = `${newWidth}%`;
+            }
+        });
+
+        document.addEventListener('mouseup', () => {
+            if (isResizing) {
+                isResizing = false;
+                document.body.style.cursor = 'default';
+                layoutResizer.classList.remove('resizing');
+            }
+        });
+    }
 
     // Initial load
     loadData();

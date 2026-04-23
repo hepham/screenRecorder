@@ -104,6 +104,10 @@ async def get_test_runs() -> List[TestRunStatus]:
             for row in rows:
                 d = dict(row)
                 d['test_run_id'] = d.pop('id')
+                if d.get('verified') is None:
+                    d['verified'] = False
+                else:
+                    d['verified'] = bool(d['verified'])
                 runs.append(TestRunStatus(**d))
             return runs
 
@@ -115,6 +119,10 @@ async def get_test_run(run_id: str) -> TestRunStatus | None:
             if row:
                 d = dict(row)
                 d['test_run_id'] = d.pop('id')
+                if d.get('verified') is None:
+                    d['verified'] = False
+                else:
+                    d['verified'] = bool(d['verified'])
                 return TestRunStatus(**d)
             return None
 
