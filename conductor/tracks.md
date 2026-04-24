@@ -61,3 +61,8 @@ Active development tracks for Remote Screen Recorder.
 
 ## [x] Track: Verification Page Redesign
 *Link: [./conductor/archive/verify_redesign_20260423/](./conductor/archive/verify_redesign_20260423/)*
+
+---
+
+## [ ] Track: LLM Auto Verification for Bixby Test Results
+*Link: [./conductor/tracks/llm_auto_verify_20260424/](./conductor/tracks/llm_auto_verify_20260424/)*
